@@ -1,4 +1,4 @@
-.PHONY: help run run-bg custom-brief custom-brief-bg tail log logs status install uninstall clean-logs check validate prompt eval eval-backfill eval-regression eval-seed-golden eval-drift eval-report eval-show eval-test eval-dashboard eval-summary eval-watch eval-compare plugin-validate scaffold-plugin
+.PHONY: help run run-bg custom-brief custom-brief-bg tail log logs status install uninstall clean-logs check validate prompt eval eval-backfill eval-regression eval-seed-golden eval-drift eval-report eval-show eval-test eval-dashboard eval-summary eval-watch eval-compare plugin-validate scaffold-plugin stats shell-lint mcp-doctor render-card brief-diff prune-artifacts open-brief bench-cli weekly-digest topic-stats git-hooks-install quiet-hours
 
 SHELL := /bin/bash
 DATE  := $(shell date +%Y-%m-%d)
@@ -358,6 +358,75 @@ else
 		$(if $(AGENT),--with-agent $(AGENT)) \
 		$(if $(DRY_RUN),--dry-run)
 endif
+
+## —— Bash-only utilities (no PowerShell mirror) ——————————
+stats: ## Project state overview (LOC, plugins, eval rows, logs). JSON=1 for machine-readable
+	@bash "$(SCRIPT_DIR)/scripts/stats.sh" $(if $(JSON),--json)
+
+shell-lint: ## Lint every .sh in the repo (bash -n + shellcheck if installed). STRICT=1 fails on warnings
+	@bash "$(SCRIPT_DIR)/scripts/shell-lint.sh" $(if $(STRICT),--strict) $(if $(JSON),--json)
+
+mcp-doctor: ## Diagnose MCP server configs (Claude/Codex/Gemini/Copilot). SERVER=notion CLI=claude JSON=1
+	@bash "$(SCRIPT_DIR)/scripts/mcp-doctor.sh" \
+		$(if $(SERVER),--server $(SERVER)) \
+		$(if $(CLI_NAME),--cli $(CLI_NAME)) \
+		$(if $(JSON),--json)
+
+render-card: ## Pretty-print a card.json in the terminal. D=YYYY-MM-DD EXAMPLE=1
+	@bash "$(SCRIPT_DIR)/scripts/render-card.sh" \
+		$(if $(EXAMPLE),--example $(or $(D),$(DATE)),$(if $(D),--date $(D)))
+
+brief-diff: ## Diff two days of briefings. FROM=YYYY-MM-DD TO=YYYY-MM-DD EXAMPLE=1
+	@bash "$(SCRIPT_DIR)/scripts/brief-diff.sh" \
+		$(if $(FROM),--from $(FROM)) \
+		$(if $(TO),--to $(TO)) \
+		$(if $(EXAMPLE),--example)
+
+prune-artifacts: ## Find/remove orphaned card.json + obsidian.md. APPLY=1 to actually delete. DAYS=N for age floor
+	@bash "$(SCRIPT_DIR)/scripts/prune-artifacts.sh" \
+		$(if $(APPLY),--apply) \
+		$(if $(DAYS),--days $(DAYS)) \
+		$(if $(INCLUDE_EVAL),--include eval) \
+		$(if $(JSON),--json)
+
+open-brief: ## Open today's brief artifacts. WHAT=log|card|obsidian|notion|dir|all D=YYYY-MM-DD
+	@bash "$(SCRIPT_DIR)/scripts/open-brief.sh" \
+		$(if $(D),--date $(D)) \
+		$(if $(WHAT),--what $(WHAT))
+
+bench-cli: ## Benchmark installed AI CLIs with a tiny prompt. TIMEOUT=30 ONLY=claude,gemini
+	@bash "$(SCRIPT_DIR)/scripts/bench-cli.sh" \
+		$(if $(TIMEOUT),--timeout $(TIMEOUT)) \
+		$(if $(ONLY),--only $(ONLY)) \
+		$(if $(JSON),--json)
+
+weekly-digest: ## Multi-day digest of activity. DAYS=7 TOP=10 SINCE=... UNTIL=...
+	@bash "$(SCRIPT_DIR)/scripts/weekly-digest.sh" \
+		$(if $(DAYS),--days $(DAYS)) \
+		$(if $(SINCE),--since $(SINCE)) \
+		$(if $(UNTIL),--until $(UNTIL)) \
+		$(if $(TOP),--top $(TOP)) \
+		$(if $(JSON),--json)
+
+topic-stats: ## Tally wikilink topics across published obsidian files. TOP=20 VAULT=1
+	@bash "$(SCRIPT_DIR)/scripts/topic-stats.sh" \
+		$(if $(TOP),--top $(TOP)) \
+		$(if $(SINCE),--since $(SINCE)) \
+		$(if $(UNTIL),--until $(UNTIL)) \
+		$(if $(VAULT),--vault) \
+		$(if $(VAULT_ONLY),--vault-only) \
+		$(if $(JSON),--json)
+
+git-hooks-install: ## Install pre-commit hook (bash -n + plugin-validate + portability tests). FORCE=1 UNINSTALL=1
+	@bash "$(SCRIPT_DIR)/scripts/git-hooks-install.sh" \
+		$(if $(FORCE),--force) \
+		$(if $(UNINSTALL),--uninstall)
+
+quiet-hours: ## Pause/resume the launchd briefing job (macOS only). PAUSE=1 | RESUME=1
+	@bash "$(SCRIPT_DIR)/scripts/quiet-hours.sh" \
+		$(if $(PAUSE),--pause) \
+		$(if $(RESUME),--resume) \
+		$(if $(JSON),--json)
 
 ## —— Info —————————————————————————————————————————————
 info: ## Show project configuration summary

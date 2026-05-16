@@ -33,15 +33,18 @@ fi
 
 case "$STATUS" in
     success)
-        MSG="${CUSTOM_MSG:-Briefing complete. Check Notion for today's report.}"
+        DEFAULT_MSG="Briefing complete. Check Notion for today's report."
+        MSG="${CUSTOM_MSG:-$DEFAULT_MSG}"
         SOUND="default"
         ;;
     failure)
-        MSG="${CUSTOM_MSG:-Briefing failed. Check logs for details.}"
+        DEFAULT_MSG="Briefing failed. Check logs for details."
+        MSG="${CUSTOM_MSG:-$DEFAULT_MSG}"
         SOUND="Basso"
         ;;
     custom)
-        MSG="${CUSTOM_MSG:-No message provided.}"
+        DEFAULT_MSG="No message provided."
+        MSG="${CUSTOM_MSG:-$DEFAULT_MSG}"
         SOUND="default"
         ;;
     *)
