@@ -91,7 +91,7 @@ for f in "${FILES[@]}"; do
   if [ "$HAVE_SHELLCHECK" -eq 1 ]; then
     # SC1091: don't follow source files. SC2155: declare+assign on same line (we use it intentionally).
     if ! out="$(shellcheck -x -e SC1091 -e SC2155 -e SC2034 "$f" 2>&1)"; then
-      # shellcheck found at least one issue. Treat error-level as fail; warnings respect --strict.
+      # ShellCheck flagged at least one issue. Treat error-level as fail; warnings respect --strict.
       if echo "$out" | grep -q '(error)'; then
         LINT_FAILS=$((LINT_FAILS + 1))
         FAIL_PATHS+=("$rel")

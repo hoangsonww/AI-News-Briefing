@@ -46,7 +46,8 @@ else
   G=''; Y=''; D=''; B=''; Z=''
 fi
 
-[ -d "$LOG_DIR" ] || { echo "No logs directory found at $LOG_DIR." >&2; exit 0; }
+# A missing logs/ dir is normal on a fresh checkout — treat it as "0 orphans".
+# The glob loops below already tolerate it, so just fall through.
 
 # Files we might delete.
 ORPHANS=()

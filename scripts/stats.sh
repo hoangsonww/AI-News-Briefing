@@ -89,11 +89,25 @@ GEMINI_PLUGINS=0
 [ -d plugins ]             && CODEX_PLUGINS=$(find plugins -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
 [ -d gemini-extensions ]   && GEMINI_PLUGINS=$(find gemini-extensions -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
 
-SKILL_COUNT=$(find claude-plugins plugins gemini-extensions -type f -name 'SKILL.md' 2>/dev/null | wc -l | tr -d ' ')
-AGENT_COUNT=$(find claude-plugins plugins gemini-extensions -type f -path '*/agents/*.md' 2>/dev/null | wc -l | tr -d ' ')
+# Only hand `find` directories that exist — a missing arg makes it exit
+# non-zero, which with `pipefail` + `set -e` would kill the script.
+PLUGIN_DIRS=()
+for d in claude-plugins plugins gemini-extensions; do
+  [ -d "$d" ] && PLUGIN_DIRS+=("$d")
+done
+SKILL_COUNT=0
+AGENT_COUNT=0
+if [ "${#PLUGIN_DIRS[@]}" -gt 0 ]; then
+  SKILL_COUNT=$(find "${PLUGIN_DIRS[@]}" -type f -name 'SKILL.md' 2>/dev/null | wc -l | tr -d ' ')
+  AGENT_COUNT=$(find "${PLUGIN_DIRS[@]}" -type f -path '*/agents/*.md' 2>/dev/null | wc -l | tr -d ' ')
+fi
 
-LOG_COUNT=$(find logs -maxdepth 1 -type f -name '*.log' 2>/dev/null | wc -l | tr -d ' ')
-CARD_LOG_COUNT=$(find logs -maxdepth 1 -type f -name '*-card.json' 2>/dev/null | wc -l | tr -d ' ')
+LOG_COUNT=0
+CARD_LOG_COUNT=0
+if [ -d logs ]; then
+  LOG_COUNT=$(find logs -maxdepth 1 -type f -name '*.log' 2>/dev/null | wc -l | tr -d ' ')
+  CARD_LOG_COUNT=$(find logs -maxdepth 1 -type f -name '*-card.json' 2>/dev/null | wc -l | tr -d ' ')
+fi
 LOG_BYTES=$(dir_size_bytes logs)
 EXAMPLE_CARDS=$(count_files example-cards '*.json')
 GOLDEN_CARDS=$(count_files eval/golden '*.json')
