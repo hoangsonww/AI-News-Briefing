@@ -21,7 +21,9 @@
 ![Slack](https://img.shields.io/badge/Slack-Webhook-4A154B?logo=slack&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
 ![Make](https://img.shields.io/badge/Make-Cross_Platform-000000?logo=gnu&logoColor=white)
-![Tests](https://img.shields.io/badge/Shell_Tests-201_Passing-10b981?logo=checkmarx&logoColor=white)
+![Tests](https://img.shields.io/badge/Shell_Tests-460_Passing-10b981?logo=checkmarx&logoColor=white)
+![Make Targets](https://img.shields.io/badge/Make-45_Targets-000000?logo=gnu&logoColor=white)
+![Utility Scripts](https://img.shields.io/badge/Scripts-43_Bash_+_21_PS1-4EAA25?logo=gnubash&logoColor=white)
 ![ANSI Colors](https://img.shields.io/badge/CLI-Styled_Output-ff6b6b?logo=windowsterminal&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-Version_Control-F05032?logo=git&logoColor=white)
 ![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github&logoColor=white)
@@ -342,7 +344,7 @@ The project includes a cross-platform `Makefile` that auto-detects your OS and r
 
 ### Utility Scripts Reference
 
-The `scripts/` directory contains 21 utility script pairs (`.sh` for macOS/Linux, `.ps1` for Windows) for managing, troubleshooting, evaluating, and extending the system. Grouped by concern below.
+The `scripts/` directory contains **21 cross-platform pairs** (`.sh` for macOS/Linux + `.ps1` for Windows) plus **12 bash-only utilities** for Unix-only concerns (POSIX shells, `launchctl`, `open`/`xdg-open`, `shellcheck`, git hooks). Grouped by concern below. For per-script deep-dives, flags, mermaid diagrams, and conventions, see [`scripts/README.md`](scripts/README.md).
 
 **Pipeline operations**
 
@@ -386,6 +388,25 @@ The `scripts/` directory contains 21 utility script pairs (`.sh` for macOS/Linux
 | `scaffold-plugin` | Bootstrap a new plugin across `claude-plugins/`, `plugins/<name>-codex/`, and `gemini-extensions/<name>/` in one command | `bash scripts/scaffold-plugin.sh --name my-plugin --description "..." --with-agent reviewer` |
 
 **Windows equivalents** use the same names with `.ps1` extension and PowerShell parameter syntax — for example `.\scripts\health-check.ps1`, `.\scripts\eval-summary.ps1 -Judge claude-haiku-4-5-20251001`, `.\scripts\plugin-validate.ps1 -Strict`, or `.\scripts\scaffold-plugin.ps1 -Name my-plugin -Description "..." -WithAgent reviewer`. Every eval and plugin script is also wrapped by a Makefile target (`make eval-summary`, `make plugin-validate`, `make scaffold-plugin NAME=... DESC=...`, etc.) that auto-routes to the correct platform.
+
+**Bash-only utilities (macOS / Linux)**
+
+These scripts target Unix-only concerns (POSIX shells, `launchctl`, `open`/`xdg-open`, `shellcheck`, git hooks, etc.) and intentionally have **no PowerShell mirror**. Every one of them ships a `--help` flag and a `--json` flag where applicable, and most are wrapped by a `make` target for convenience.
+
+| Script | Description | Example Usage |
+|---|---|---|
+| `stats` | Project state overview: file counts, LOC, plugins, eval rows, golden cards, logs | `bash scripts/stats.sh` or `make stats JSON=1` |
+| `shell-lint` | Run `bash -n` + `shellcheck` (if installed) on every `.sh` in the repo | `bash scripts/shell-lint.sh --strict` or `make shell-lint STRICT=1` |
+| `mcp-doctor` | Diagnose Notion (or any) MCP server config across Claude / Codex / Gemini / Copilot configs | `bash scripts/mcp-doctor.sh` or `make mcp-doctor SERVER=notion` |
+| `render-card` | Pretty-print a daily `*-card.json` in the terminal with ANSI sections, bullets, and source links | `bash scripts/render-card.sh --example 2026-03-18` |
+| `brief-diff` | Show what changed between two days of briefings (uses `delta` if installed) | `bash scripts/brief-diff.sh --from 2026-03-17 --to 2026-03-18` |
+| `prune-artifacts` | Find and (with `--apply`) remove orphaned `*-card.json` / `*-obsidian.md` files | `bash scripts/prune-artifacts.sh --days 30 --apply` |
+| `open-brief` | Open today's log / card / obsidian / Notion URL via `open` (macOS) or `xdg-open` (Linux) | `bash scripts/open-brief.sh --what notion` |
+| `bench-cli` | Tiny benchmark of every installed AI CLI; reports wall-clock and pass/fail per engine | `bash scripts/bench-cli.sh --timeout 30` |
+| `weekly-digest` | Multi-day digest: success rate, engine breakdown, top source domains, est. cost, median composite | `bash scripts/weekly-digest.sh --days 14 --top 10` |
+| `topic-stats` | Tally `[[wikilink]]` frequencies across published Obsidian files (or the vault) | `bash scripts/topic-stats.sh --top 30 --vault` |
+| `git-hooks-install` | Install a pre-commit hook: `bash -n` on staged `.sh`, plugin-validate, portability tests | `bash scripts/git-hooks-install.sh` |
+| `quiet-hours` | macOS-only: pause / resume the launchd briefing job via `launchctl` | `bash scripts/quiet-hours.sh --pause` |
 
 ---
 
@@ -690,7 +711,7 @@ Logs older than 30 days are automatically deleted at the end of each run on both
 
 ## Tests
 
-We have several test suites, with 201 non-blocking tests that verify syntax, structure, arg handling, template substitution, card JSON, notification error paths, Obsidian publishing, and cross-platform portability. No external services are called.
+**460 non-blocking bash tests across 7 suites** (plus 91 PowerShell tests and an offline Python eval-harness suite) verify syntax, structure, arg handling, template substitution, card JSON, notification error paths, Obsidian publishing, cross-platform portability, and every utility-script contract. No external services are called.
 
 <p align="center">
   <img src="img/tests.png" alt="Tests Overview" width="100%">
@@ -701,8 +722,11 @@ We have several test suites, with 201 non-blocking tests that verify syntax, str
 bash tests/run-all.sh
 
 # Individual suites
-bash tests/test-custom-brief.sh
+bash tests/test-bash-only-scripts.sh
+bash tests/test-utility-scripts.sh
 bash tests/test-daily-brief.sh
+bash tests/test-custom-brief.sh
+bash tests/test-obsidian.sh
 bash tests/test-notifications.sh
 bash tests/test-portability.sh
 ```
@@ -714,11 +738,16 @@ powershell -ExecutionPolicy Bypass -File tests\test-all.ps1
 
 | Suite | Tests | Coverage |
 |---|---|---|
-| `test-custom-brief.sh` | 37 | Args, template substitution, prompt structure, skill |
-| `test-daily-brief.sh` | 56 | Prompt steps, 9 topics, 8 changelog URLs, entry scripts, dedup file |
-| `test-notifications.sh` | 37 | Card JSON validity, Adaptive Card structure, converter, error handling |
-| `test-portability.sh` | 26 | Bash 3.2 compat, awk, date, `-f` not `-x`, ANSI color safety |
-| `test-all.ps1` | 91 | PowerShell syntax, all prompts, template substitution, cards, docs |
+| `test-bash-only-scripts.sh` | **164** | Existence, executability, `bash -n`, `--help`, `--json` validity, unknown-flag rejection, real end-to-end smoke for every bash-only utility (`stats`, `shell-lint`, `mcp-doctor`, `render-card`, `brief-diff`, `prune-artifacts`, `open-brief`, `bench-cli`, `weekly-digest`, `topic-stats`, `git-hooks-install`, `quiet-hours`) + Makefile + README coverage |
+| `test-utility-scripts.sh` | **79** | `eval-summary`, `eval-watch`, `eval-compare`, `plugin-validate`, `scaffold-plugin` — pair existence, strict-mode headers, arg validation, scaffold dry-run + real-write, plugin-validate against current repo, eval-summary/compare against synthetic temp DBs |
+| `test-daily-brief.sh` | **88** | Prompt steps, topics, changelog URLs, entry scripts, dedup file |
+| `test-custom-brief.sh` | **56** | Args, template substitution, prompt structure, skill |
+| `test-obsidian.sh` | **30** | Vault simulation, wikilink stubs, publish-obsidian round-trip |
+| `test-portability.sh` | **26** | Bash 3.2 compat, awk, date, `-f` not `-x`, ANSI color safety |
+| `test-notifications.sh` | **17** | Card JSON validity, Adaptive Card structure, converter, error handling |
+| `test-all.ps1` | **91** | PowerShell syntax, all prompts, template substitution, cards, docs |
+
+**Auto-discovery:** `tests/run-all.sh` runs every `tests/test-*.sh` it finds, so dropping a new suite into `tests/` wires it in automatically.
 
 Full documentation: [TESTS.md](TESTS.md)
 
@@ -837,8 +866,9 @@ ai-news-briefing/
 ├── wiki/                        # Landing page assets
 │   ├── style.css                # Styles
 │   └── script.js                # Interactions
-├── Makefile                     # Cross-platform task runner
-├── scripts/                     # Utility scripts (sh + ps1 pairs)
+├── Makefile                     # Cross-platform task runner (45 targets)
+├── scripts/                     # Utility scripts (21 sh+ps1 pairs + 12 bash-only)
+│   │   # ── Pipeline ops (cross-platform pairs) ────────────────────
 │   ├── health-check.sh/.ps1     # Verify full setup
 │   ├── log-summary.sh/.ps1      # Summarize recent runs
 │   ├── log-search.sh/.ps1       # Search across all logs
@@ -850,10 +880,34 @@ ai-news-briefing/
 │   ├── topic-edit.sh/.ps1       # Add/remove/list topics
 │   ├── update-schedule.sh/.ps1  # Change daily run time
 │   ├── notify.sh/.ps1           # Send native OS notifications
+│   │   # ── Delivery (cross-platform pairs) ─────────────────────────
 │   ├── notify-teams.sh/.ps1     # Post briefing to Microsoft Teams
 │   ├── notify-slack.sh/.ps1     # Post briefing to Slack
-│   ├── teams-to-slack.py        # Convert Teams Adaptive Card JSON to Slack Block Kit
+│   ├── publish-obsidian.sh/.ps1 # Publish briefing to Obsidian vault
+│   ├── test-obsidian.sh/.ps1    # Test Obsidian vault connectivity
+│   ├── teams-to-slack.py        # Convert Teams Adaptive Card → Slack Block Kit
 │   ├── build-teams-card.py      # Legacy card builder (not used in current flow)
+│   │   # ── Eval harness (cross-platform pairs) ─────────────────────
+│   ├── eval-summary.sh/.ps1     # Print eval store summary (median, drift, gates)
+│   ├── eval-watch.sh/.ps1       # Tail eval scores as they land
+│   ├── eval-compare.sh/.ps1     # Compare two judges over a date range
+│   │   # ── Plugin authoring (cross-platform pairs) ─────────────────
+│   ├── plugin-validate.sh/.ps1  # Lint plugins + Gemini extensions
+│   ├── scaffold-plugin.sh/.ps1  # Bootstrap a new claude-plugins/<n>
+│   │   # ── Bash-only utilities (Unix only) ─────────────────────────
+│   ├── stats.sh                 # Project state overview (LOC, files, plugins)
+│   ├── shell-lint.sh            # bash -n + shellcheck wrapper for all .sh
+│   ├── mcp-doctor.sh            # Diagnose MCP server config (Claude/Codex/Gemini/Copilot)
+│   ├── render-card.sh           # Pretty-print a daily Adaptive Card to terminal
+│   ├── brief-diff.sh            # Diff two daily briefings (with delta/colordiff)
+│   ├── prune-artifacts.sh       # Remove orphaned card/obsidian/dry-run artifacts
+│   ├── open-brief.sh            # Open log/card/obsidian/Notion via open/xdg-open
+│   ├── bench-cli.sh             # Benchmark installed AI CLIs (wall-clock + size)
+│   ├── weekly-digest.sh         # N-day rollup: success, engine mix, cost, topics
+│   ├── topic-stats.sh           # Tally [[wikilink]] frequency across briefings
+│   ├── git-hooks-install.sh     # Install pre-commit hook (bash -n + plugin-validate)
+│   ├── quiet-hours.sh           # macOS launchctl pause/resume for the daily job
+│   ├── README.md                # Full scripts/ reference (this dir's deep-dive)
 │   └── uninstall.sh/.ps1        # Full cleanup and removal
 ├── briefing.sh                  # Daily briefing entry point (bash)
 ├── briefing.ps1                 # Daily briefing entry point (PowerShell)
@@ -866,13 +920,16 @@ ai-news-briefing/
 │   └── custom-brief.md          # Claude Code skill: custom topic briefing
 ├── com.ainews.briefing.plist    # macOS launchd schedule definition
 ├── install-task.ps1             # Windows Task Scheduler installer
-├── tests/                       # 201 non-blocking tests
-│   ├── run-all.sh               # Bash test runner
-│   ├── test-custom-brief.sh     # Custom brief tests
-│   ├── test-daily-brief.sh      # Daily briefing tests
-│   ├── test-notifications.sh    # Notification pipeline tests
-│   ├── test-portability.sh      # Cross-platform portability tests
-│   └── test-all.ps1             # PowerShell test suite
+├── tests/                       # 460 non-blocking bash tests + 91 PowerShell tests
+│   ├── run-all.sh               # Bash test runner (auto-discovers test-*.sh)
+│   ├── test-bash-only-scripts.sh# 164 tests: 12 bash-only utilities (stats, lint, doctor, render-card, ...)
+│   ├── test-utility-scripts.sh  # 79 tests: eval-summary/watch/compare, plugin-validate, scaffold-plugin
+│   ├── test-daily-brief.sh      # 88 tests: daily briefing prompt + entry scripts
+│   ├── test-custom-brief.sh     # 56 tests: custom brief args + template
+│   ├── test-obsidian.sh         # 30 tests: vault simulation + wikilink stubs
+│   ├── test-portability.sh      # 26 tests: bash 3.2 compat, awk, date, ANSI
+│   ├── test-notifications.sh    # 17 tests: Adaptive Card + Slack converter
+│   └── test-all.ps1             # 91 PowerShell tests (Windows parity)
 ├── logs/                        # Run logs (git-ignored)
 ├── backups/                     # Prompt backups (git-ignored)
 ├── eval/                        # Quality eval harness (LLM-as-judge)

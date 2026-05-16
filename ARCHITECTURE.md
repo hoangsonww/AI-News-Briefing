@@ -21,7 +21,9 @@
 ![Slack](https://img.shields.io/badge/Slack-Webhook-4A154B?logo=slack&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
 ![Make](https://img.shields.io/badge/Make-Cross_Platform-000000?logo=gnu&logoColor=white)
-![Tests](https://img.shields.io/badge/Shell_Tests-201_Passing-10b981?logo=checkmarx&logoColor=white)
+![Tests](https://img.shields.io/badge/Shell_Tests-460_Passing-10b981?logo=checkmarx&logoColor=white)
+![Make Targets](https://img.shields.io/badge/Make-45_Targets-000000?logo=gnu&logoColor=white)
+![Utility Scripts](https://img.shields.io/badge/Scripts-43_Bash_+_21_PS1-4EAA25?logo=gnubash&logoColor=white)
 ![ANSI Colors](https://img.shields.io/badge/CLI-Styled_Output-ff6b6b?logo=windowsterminal&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-Version_Control-F05032?logo=git&logoColor=white)
 ![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github&logoColor=white)
@@ -117,6 +119,38 @@ graph TD
 - **Cost containment.** A hard budget cap of $2.00 per run prevents runaway API costs.
 - **Observability.** All output (stdout and stderr) is captured in date-stamped log files.
 - **Multi-channel delivery.** Briefings publish to Notion and optionally post to Microsoft Teams and/or Slack via webhooks.
+- **Operational tooling separate from pipeline.** A complementary **developer-tooling layer** (`scripts/`) sits beside the pipeline and is never invoked by the scheduler. It contains 21 cross-platform script pairs (pipeline ops, delivery helpers, eval glue, plugin authoring) and 12 bash-only utilities (project stats, shell lint, MCP diagnostics, card preview, daily-brief diffing, artifact pruning, AI-CLI benchmarks, weekly digest, topic stats, git-hooks installer, `launchctl` quiet hours). These tools share strict conventions (`set -euo pipefail`, `--help` / `--json` / `--quiet`, auto-ANSI) and are exhaustively tested. See [`scripts/README.md`](scripts/README.md) for the full reference.
+
+```mermaid
+flowchart LR
+    classDef pipe   fill:#1e3a5f,stroke:#5b8dd8,color:#d4e4f8
+    classDef ops    fill:#3a2a1e,stroke:#d49b5b,color:#f5e6c8
+    classDef dev    fill:#2a2440,stroke:#8b7ad4,color:#e4e4ef
+
+    subgraph PIPELINE["Automated daily pipeline (scheduler-driven)"]
+        direction TB
+        BR["briefing.sh / .ps1"]:::pipe
+        CB["custom-brief.sh / .ps1"]:::pipe
+        NT["notify-teams · notify-slack · publish-obsidian"]:::pipe
+    end
+
+    subgraph OPS["Pipeline ops (operator-driven, cross-platform pairs)"]
+        direction TB
+        HC["health-check · log-summary · log-search<br/>dry-run · test-notion · cost-report<br/>export-logs · backup-prompt · topic-edit<br/>update-schedule · notify · uninstall"]:::ops
+    end
+
+    subgraph DEV["Developer utilities (bash-only, Unix)"]
+        direction TB
+        DV["stats · shell-lint · mcp-doctor<br/>render-card · brief-diff · prune-artifacts<br/>open-brief · bench-cli · weekly-digest<br/>topic-stats · git-hooks-install · quiet-hours"]:::dev
+        EV["eval-summary · eval-watch · eval-compare<br/>plugin-validate · scaffold-plugin"]:::ops
+    end
+
+    BR -. produces .-> OPS
+    BR -. produces .-> DEV
+    CB -. produces .-> OPS
+    OPS -. lints / scaffolds .-> PIPELINE
+    DEV -. lints / scaffolds .-> PIPELINE
+```
 
 ---
 
@@ -920,7 +954,9 @@ This creates a growing knowledge graph where topics accumulate backlinks from ea
 
 ## 8. Test Suite
 
-201 non-blocking tests across bash and PowerShell verify the entire system without calling external services. Tests cover syntax, structure, argument handling, template substitution, card JSON validation, notification error paths, Obsidian publishing, and cross-platform portability.
+**460 non-blocking bash tests across 7 suites** (plus 91 PowerShell tests and an offline Python eval-harness suite) verify the entire system without calling external services. Tests cover syntax, structure, argument handling, template substitution, card JSON validation, notification error paths, Obsidian publishing, cross-platform portability, every utility script's `--help`/`--json` contract, and end-to-end smoke behavior of all 12 bash-only operational tools.
+
+The bash runner (`tests/run-all.sh`) auto-discovers any `test-*.sh` file in `tests/`, so adding a new suite is a single file drop.
 
 ### Test Architecture
 
@@ -931,14 +967,16 @@ flowchart LR
     classDef py fill:#1e3a2f,stroke:#5bd49b,color:#d4f8e2
     classDef cov fill:#2a2440,stroke:#8b7ad4,color:#e4e4ef
 
-    subgraph BASH["Bash · macOS / Linux / Git Bash"]
+    subgraph BASH["Bash · macOS / Linux / Git Bash · 460 tests"]
         direction TB
-        R["tests/run-all.sh"]:::sh
-        R --> T1["test-custom-brief.sh<br/>48 tests"]:::sh
-        R --> T2["test-daily-brief.sh<br/>80 tests"]:::sh
-        R --> T3["test-notifications.sh<br/>17 tests"]:::sh
-        R --> T4["test-portability.sh<br/>26 tests"]:::sh
+        R["tests/run-all.sh<br/>auto-discovers test-*.sh"]:::sh
+        R --> T1["test-bash-only-scripts.sh<br/>164 tests"]:::sh
+        R --> T2["test-utility-scripts.sh<br/>79 tests"]:::sh
+        R --> T3["test-daily-brief.sh<br/>88 tests"]:::sh
+        R --> T4["test-custom-brief.sh<br/>56 tests"]:::sh
         R --> T5["test-obsidian.sh<br/>30 tests"]:::sh
+        R --> T6["test-portability.sh<br/>26 tests"]:::sh
+        R --> T7["test-notifications.sh<br/>17 tests"]:::sh
     end
 
     subgraph PWSH["PowerShell · Windows"]
@@ -951,12 +989,14 @@ flowchart LR
 
     subgraph COV["Coverage focus"]
         direction TB
-        X1["Args, templates,<br/>prompt + skill structure"]:::cov
-        X2["Prompt steps, topics,<br/>changelogs, dedup"]:::cov
-        X3["Card JSON validity,<br/>Slack converter"]:::cov
-        X4["Bash 3.2, awk, date,<br/>ANSI safety"]:::cov
+        X1["12 bash-only utilities<br/>(stats/lint/doctor/render/diff/...)"]:::cov
+        X2["eval-* + plugin-validate +<br/>scaffold-plugin contracts"]:::cov
+        X3["Prompt steps, topics,<br/>changelogs, dedup"]:::cov
+        X4["Args, templates,<br/>prompt + skill structure"]:::cov
         X5["Vault simulation,<br/>wikilink stubs"]:::cov
-        X6["Eval extract / judge /<br/>store / drift / report"]:::cov
+        X6["Bash 3.2, awk, date,<br/>ANSI safety"]:::cov
+        X7["Card JSON validity,<br/>Slack converter"]:::cov
+        X8["Eval extract / judge /<br/>store / drift / report"]:::cov
     end
 
     T1 --> X1
@@ -964,10 +1004,12 @@ flowchart LR
     T3 --> X3
     T4 --> X4
     T5 --> X5
-    PS --> X1
-    PS --> X2
+    T6 --> X6
+    T7 --> X7
     PS --> X3
-    PY --> X6
+    PS --> X4
+    PS --> X7
+    PY --> X8
 ```
 
 <p align="center">
@@ -985,15 +1027,17 @@ flowchart LR
 
 | File | Tests | Focus |
 |---|---|---|
-| `tests/run-all.sh` | -- | Runner: executes all `test-*.sh` suites |
-| `tests/test-custom-brief.sh` | 48 | Custom brief: args, template, prompt, skill, Obsidian |
-| `tests/test-daily-brief.sh` | 80 | Daily brief: prompt, topics, changelogs, scripts, Obsidian |
-| `tests/test-notifications.sh` | 17 | Notifications: card JSON, converter, error paths |
-| `tests/test-obsidian.sh` | 30 | Obsidian: publish script, wikilinks, vault simulation |
-| `tests/test-portability.sh` | 26 | Cross-platform: bash version, awk, date, colors |
-| `tests/test-all.ps1` | 91 | PowerShell: syntax, prompts, cards, converter, docs |
+| `tests/run-all.sh` | -- | Runner: auto-discovers and executes every `tests/test-*.sh` |
+| `tests/test-bash-only-scripts.sh` | **164** | The 12 bash-only utilities: existence, bash syntax, `--help`, `--json`, unknown-flag rejection, end-to-end smoke behavior, Makefile + README coverage |
+| `tests/test-utility-scripts.sh` | **79** | `eval-summary` / `eval-watch` / `eval-compare` / `plugin-validate` / `scaffold-plugin`: pair existence, strict-mode headers, arg validation, real and dry-run executions against synthetic temp DBs and a clean tempdir |
+| `tests/test-daily-brief.sh` | **88** | Daily brief: prompt, topics, changelogs, scripts, Obsidian |
+| `tests/test-custom-brief.sh` | **56** | Custom brief: args, template, prompt, skill, Obsidian |
+| `tests/test-obsidian.sh` | **30** | Obsidian: publish script, wikilinks, vault simulation |
+| `tests/test-portability.sh` | **26** | Cross-platform: bash 3.2, awk, date, ANSI auto-disable |
+| `tests/test-notifications.sh` | **17** | Notifications: card JSON, converter, error paths |
+| `tests/test-all.ps1` | **91** | PowerShell: syntax, prompts, cards, converter, docs |
 
-Full documentation: [TESTS.md](TESTS.md)
+Full documentation: [TESTS.md](TESTS.md) · scripts deep-dive: [`scripts/README.md`](scripts/README.md)
 
 ## 9. Quality Eval Harness
 
@@ -1526,12 +1570,15 @@ flowchart TD
         D2["install-task.ps1"]:::file
     end
 
-    subgraph SCRIPTS["scripts/ (13 sh + ps1 pairs)"]
+    subgraph SCRIPTS["scripts/ (21 sh+ps1 pairs · 12 bash-only · 3 .py)"]
         direction TB
-        SC_NOTIFY["notify-teams · notify-slack"]:::file
-        SC_OBS["publish-obsidian · test-obsidian"]:::file
-        SC_OPS["health-check · log-summary · dry-run · topic-edit · ..."]:::file
+        SC_NOTIFY["Delivery:<br/>notify-teams · notify-slack · publish-obsidian · test-obsidian"]:::file
+        SC_OPS["Pipeline ops:<br/>health-check · log-summary · log-search · dry-run<br/>test-notion · cost-report · export-logs · backup-prompt<br/>topic-edit · update-schedule · notify · uninstall"]:::file
+        SC_EVAL["Eval harness:<br/>eval-summary · eval-watch · eval-compare"]:::file
+        SC_PLUGIN["Plugin authoring:<br/>plugin-validate · scaffold-plugin"]:::file
+        SC_BASH["Bash-only utilities (Unix):<br/>stats · shell-lint · mcp-doctor · render-card<br/>brief-diff · prune-artifacts · open-brief · bench-cli<br/>weekly-digest · topic-stats · git-hooks-install · quiet-hours"]:::file
         SC_PY["teams-to-slack.py · build-teams-card.py (legacy)"]:::file
+        SC_README["scripts/README.md (deep-dive reference)"]:::file
     end
 
     subgraph LOGS["logs/ (gitignored)"]
@@ -1605,8 +1652,21 @@ flowchart TD
 | `scripts/test-obsidian.ps1` | Windows | Obsidian vault connectivity test (PowerShell) | Yes |
 | `scripts/teams-to-slack.py` | Shared | Converts Teams Adaptive Card JSON to Slack Block Kit JSON | Yes |
 | `scripts/build-teams-card.py` | Shared | **Legacy.** Old log-parsing card builder. No longer referenced. | Yes |
-| `scripts/*.sh` | macOS/Linux | Utility scripts (12 tools) | Yes |
-| `scripts/*.ps1` | Windows | Utility scripts (12 tools) | Yes |
+| `scripts/*.sh` (paired) | macOS/Linux | 21 cross-platform utility scripts (Bash side of `.sh`+`.ps1` pair) | Yes |
+| `scripts/*.ps1` | Windows | 21 cross-platform utility scripts (PowerShell side of pair) | Yes |
+| `scripts/stats.sh` | macOS/Linux | Project state overview (LOC, files, plugins, eval). `--json` for CI. | Yes |
+| `scripts/shell-lint.sh` | macOS/Linux | `bash -n` + `shellcheck` wrapper for every `.sh` in the repo | Yes |
+| `scripts/mcp-doctor.sh` | macOS/Linux | Diagnoses MCP server config across Claude / Codex / Gemini / Copilot | Yes |
+| `scripts/render-card.sh` | macOS/Linux | Pretty-prints a daily Adaptive Card to terminal (ANSI) | Yes |
+| `scripts/brief-diff.sh` | macOS/Linux | Diffs two daily briefings (with `delta`/`colordiff` if installed) | Yes |
+| `scripts/prune-artifacts.sh` | macOS/Linux | Removes orphaned `*-card.json` / `*-obsidian.md` / `*-dry-run.log` artifacts | Yes |
+| `scripts/open-brief.sh` | macOS/Linux | Opens log/card/obsidian/Notion URL via `open` (macOS) or `xdg-open` (Linux) | Yes |
+| `scripts/bench-cli.sh` | macOS/Linux | Benchmarks installed AI CLIs (wall-clock + response size) | Yes |
+| `scripts/weekly-digest.sh` | macOS/Linux | N-day digest: success %, engine mix, cost, eval medians, top sources | Yes |
+| `scripts/topic-stats.sh` | macOS/Linux | Tallies `[[wikilink]]` frequency across `*-obsidian.md` files | Yes |
+| `scripts/git-hooks-install.sh` | macOS/Linux | Installs a pre-commit hook (`bash -n` + `plugin-validate` + `test-portability`) | Yes |
+| `scripts/quiet-hours.sh` | macOS | `launchctl` pause/resume for `com.ainews.briefing` (vacations, conferences) | Yes |
+| `scripts/README.md` | Shared | Comprehensive scripts/ reference (deep-dive, conventions, mermaid maps) | Yes |
 | `logs/*.log` | Shared | Daily run logs | No (gitignored) |
 | `logs/*-card.json` | Shared | Adaptive Card JSON written by Claude Code (Step 4). POSTed to Teams as-is. | No (gitignored) |
 | `logs/*-obsidian.md` | Shared | Obsidian-formatted markdown with `[[wikilinks]]` written by Claude Code (Step 5). Published to vault by `publish-obsidian.sh/.ps1`. | No (gitignored) |
