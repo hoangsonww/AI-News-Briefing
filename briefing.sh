@@ -159,6 +159,15 @@ PREFERRED="${CLI_ARG:-${AI_BRIEFING_CLI:-}}"
 SUCCESS=false
 USED_CLI=""
 
+# Artifacts the engine is expected to produce. Success is gated on
+# CARD_FILE existing, so clear any stale or partial artifacts before
+# every attempt -- otherwise a previous run, or a prior engine in the
+# fallback chain that wrote a partial file before failing, could make a
+# later engine look successful when it produced nothing.
+CARD_FILE_CHECK="$LOG_DIR/$DATE-card.json"
+OBS_FILE_CHECK="$LOG_DIR/$DATE-obsidian.md"
+clean_artifacts() { rm -f "$CARD_FILE_CHECK" "$OBS_FILE_CHECK"; }
+
 if [ -n "$PREFERRED" ]; then
   # -- Explicit engine chosen ----------------------------------
   binary=$(resolve_binary "$PREFERRED" 2>/dev/null) || {
@@ -167,17 +176,19 @@ if [ -n "$PREFERRED" ]; then
   }
   write_log "Engine: $PREFERRED ($binary)"
 
+  clean_artifacts
   run_engine "$PREFERRED" "$binary" "$PROMPT"
   exit_code=$?
 
-  CARD_FILE_CHECK="$LOG_DIR/$DATE-card.json"
   if [ $exit_code -eq 0 ] && [ -f "$CARD_FILE_CHECK" ]; then
     SUCCESS=true
     USED_CLI="$PREFERRED"
   elif [ $exit_code -eq 0 ]; then
     write_log "Briefing FAILED with $PREFERRED: exit 0 but no card.json produced (likely auth or MCP failure)."
+    clean_artifacts
   else
     write_log "Briefing FAILED with $PREFERRED (exit code $exit_code)."
+    clean_artifacts
   fi
 else
   # -- Fallback chain ------------------------------------------
@@ -188,10 +199,10 @@ else
     }
     write_log "Attempting with $cli ($binary)..."
 
+    clean_artifacts
     run_engine "$cli" "$binary" "$PROMPT"
     exit_code=$?
 
-    CARD_FILE_CHECK="$LOG_DIR/$DATE-card.json"
     if [ $exit_code -eq 0 ] && [ -f "$CARD_FILE_CHECK" ]; then
       SUCCESS=true
       USED_CLI="$cli"
@@ -203,6 +214,7 @@ else
     else
       write_log "$cli failed (exit $exit_code). Trying next engine..."
     fi
+    clean_artifacts
   done
 fi
 
