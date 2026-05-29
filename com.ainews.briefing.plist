@@ -28,9 +28,11 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/Users/davidnguyen/.local/bin</string>
+        <string>/Users/davidnguyen/.local/bin:/Users/davidnguyen/.nvm/versions/node/v22.21.1/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
         <string>/Users/davidnguyen</string>
+        <key>AI_BRIEFING_MODEL</key>
+        <string>claude-haiku-4-5-20251001</string>
     </dict>
 </dict>
 </plist>
