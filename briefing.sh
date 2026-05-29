@@ -167,9 +167,12 @@ if [ -n "$PREFERRED" ]; then
   run_engine "$PREFERRED" "$binary" "$PROMPT"
   exit_code=$?
 
-  if [ $exit_code -eq 0 ]; then
+  CARD_FILE_CHECK="$LOG_DIR/$DATE-card.json"
+  if [ $exit_code -eq 0 ] && [ -f "$CARD_FILE_CHECK" ]; then
     SUCCESS=true
     USED_CLI="$PREFERRED"
+  elif [ $exit_code -eq 0 ]; then
+    write_log "Briefing FAILED with $PREFERRED: exit 0 but no card.json produced (likely auth or MCP failure)."
   else
     write_log "Briefing FAILED with $PREFERRED (exit code $exit_code)."
   fi
@@ -185,13 +188,18 @@ else
     run_engine "$cli" "$binary" "$PROMPT"
     exit_code=$?
 
-    if [ $exit_code -eq 0 ]; then
+    CARD_FILE_CHECK="$LOG_DIR/$DATE-card.json"
+    if [ $exit_code -eq 0 ] && [ -f "$CARD_FILE_CHECK" ]; then
       SUCCESS=true
       USED_CLI="$cli"
       break
     fi
 
-    write_log "$cli failed (exit $exit_code). Trying next engine..."
+    if [ $exit_code -eq 0 ] && [ ! -f "$CARD_FILE_CHECK" ]; then
+      write_log "$cli exited 0 but produced no card.json (likely auth or MCP failure). Trying next engine..."
+    else
+      write_log "$cli failed (exit $exit_code). Trying next engine..."
+    fi
   done
 fi
 
