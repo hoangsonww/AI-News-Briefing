@@ -138,17 +138,20 @@ fi
 
 PROMPT="$(cat "$SCRIPT_DIR/prompt.md")"
 
-if [[ "$DATE" != "$TODAY" ]]; then
-  DATE_PREFIX="BRIEFING DATE OVERRIDE: $DATE
-Generate the briefing for $DATE, NOT today ($TODAY).
+DATE_PREFIX="BRIEFING DATE: $DATE
+Use $DATE as today's date for this briefing. Ignore your own clock — the host may be in a different timezone.
 Search for AI news from $DATE (past 24 hours relative to that date).
-The Notion page title should use $DATE.
-The card.json filename should use $DATE (logs/$DATE-card.json).
+The Notion page title MUST use $DATE (e.g. \"$DATE\").
+Do NOT create any page titled with any other date.
+The card.json filename MUST be logs/$DATE-card.json.
 ---
 
 "
-  PROMPT="${DATE_PREFIX}${PROMPT}"
-  write_log "Date override: generating briefing for $DATE"
+PROMPT="${DATE_PREFIX}${PROMPT}"
+if [[ "$DATE" != "$TODAY" ]]; then
+  write_log "Date override: generating briefing for $DATE (host today is $TODAY)"
+else
+  write_log "Briefing date pinned to $DATE."
 fi
 
 # -- Execution with fallback -----------------------------------
