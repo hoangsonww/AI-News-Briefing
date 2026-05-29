@@ -138,23 +138,35 @@ fi
 
 PROMPT="$(cat "$SCRIPT_DIR/prompt.md")"
 
-if [[ "$DATE" != "$TODAY" ]]; then
-  DATE_PREFIX="BRIEFING DATE OVERRIDE: $DATE
-Generate the briefing for $DATE, NOT today ($TODAY).
+DATE_PREFIX="BRIEFING DATE: $DATE
+Use $DATE as today's date for this briefing. Ignore your own clock — the host may be in a different timezone.
 Search for AI news from $DATE (past 24 hours relative to that date).
-The Notion page title should use $DATE.
-The card.json filename should use $DATE (logs/$DATE-card.json).
+The Notion page title MUST use $DATE (e.g. \"$DATE\").
+Do NOT create any page titled with any other date.
+The card.json filename MUST be logs/$DATE-card.json.
 ---
 
 "
-  PROMPT="${DATE_PREFIX}${PROMPT}"
-  write_log "Date override: generating briefing for $DATE"
+PROMPT="${DATE_PREFIX}${PROMPT}"
+if [[ "$DATE" != "$TODAY" ]]; then
+  write_log "Date override: generating briefing for $DATE (host today is $TODAY)"
+else
+  write_log "Briefing date pinned to $DATE."
 fi
 
 # -- Execution with fallback -----------------------------------
 PREFERRED="${CLI_ARG:-${AI_BRIEFING_CLI:-}}"
 SUCCESS=false
 USED_CLI=""
+
+# Artifacts the engine is expected to produce. Success is gated on
+# CARD_FILE existing, so clear any stale or partial artifacts before
+# every attempt -- otherwise a previous run, or a prior engine in the
+# fallback chain that wrote a partial file before failing, could make a
+# later engine look successful when it produced nothing.
+CARD_FILE_CHECK="$LOG_DIR/$DATE-card.json"
+OBS_FILE_CHECK="$LOG_DIR/$DATE-obsidian.md"
+clean_artifacts() { rm -f "$CARD_FILE_CHECK" "$OBS_FILE_CHECK"; }
 
 if [ -n "$PREFERRED" ]; then
   # -- Explicit engine chosen ----------------------------------
@@ -164,14 +176,19 @@ if [ -n "$PREFERRED" ]; then
   }
   write_log "Engine: $PREFERRED ($binary)"
 
+  clean_artifacts
   run_engine "$PREFERRED" "$binary" "$PROMPT"
   exit_code=$?
 
-  if [ $exit_code -eq 0 ]; then
+  if [ $exit_code -eq 0 ] && [ -f "$CARD_FILE_CHECK" ]; then
     SUCCESS=true
     USED_CLI="$PREFERRED"
+  elif [ $exit_code -eq 0 ]; then
+    write_log "Briefing FAILED with $PREFERRED: exit 0 but no card.json produced (likely auth or MCP failure)."
+    clean_artifacts
   else
     write_log "Briefing FAILED with $PREFERRED (exit code $exit_code)."
+    clean_artifacts
   fi
 else
   # -- Fallback chain ------------------------------------------
@@ -182,16 +199,22 @@ else
     }
     write_log "Attempting with $cli ($binary)..."
 
+    clean_artifacts
     run_engine "$cli" "$binary" "$PROMPT"
     exit_code=$?
 
-    if [ $exit_code -eq 0 ]; then
+    if [ $exit_code -eq 0 ] && [ -f "$CARD_FILE_CHECK" ]; then
       SUCCESS=true
       USED_CLI="$cli"
       break
     fi
 
-    write_log "$cli failed (exit $exit_code). Trying next engine..."
+    if [ $exit_code -eq 0 ] && [ ! -f "$CARD_FILE_CHECK" ]; then
+      write_log "$cli exited 0 but produced no card.json (likely auth or MCP failure). Trying next engine..."
+    else
+      write_log "$cli failed (exit $exit_code). Trying next engine..."
+    fi
+    clean_artifacts
   done
 fi
 
