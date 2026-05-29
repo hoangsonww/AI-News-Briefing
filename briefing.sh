@@ -14,6 +14,11 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="$SCRIPT_DIR/logs"
 
+# The prompt tells the engine to read/write relative paths (logs/covered-stories.txt,
+# logs/$DATE-card.json, etc). Under launchd the cwd is "/", so those resolve to /logs
+# and fail read-only. Pin cwd to the project dir so every engine sees the real logs/.
+cd "$SCRIPT_DIR" || { echo "ERROR: cannot cd to $SCRIPT_DIR" >&2; exit 1; }
+
 # -- Argument parsing ------------------------------------------
 CLI_ARG=""
 DATE_ARG=""
@@ -116,11 +121,13 @@ run_engine() {
         "$prompt" >> "$LOG_FILE" 2>&1
       ;;
     codex)
-      "$binary" exec --full-auto \
+      # --skip-git-repo-check: under launchd codex can't confirm a trusted dir
+      "$binary" exec --full-auto --skip-git-repo-check \
         "$prompt" >> "$LOG_FILE" 2>&1
       ;;
     gemini)
-      "$binary" -p \
+      # --skip-trust: non-interactive runs aren't in a "trusted" workspace by default
+      "$binary" --skip-trust -p \
         "$prompt" >> "$LOG_FILE" 2>&1
       ;;
     copilot)
