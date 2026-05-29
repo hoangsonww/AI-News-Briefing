@@ -1,6 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!--
+  NOTE FOR OTHER USERS: every absolute path below is hardcoded for the
+  author's machine (user "davidnguyen"). launchd does NOT expand ~, $HOME,
+  or env vars in this file, so before `make install` (or copying to
+  ~/Library/LaunchAgents) you MUST replace ALL of these for your own setup:
+    - ProgramArguments  -> path to your briefing.sh
+    - StandardOutPath / StandardErrorPath -> your logs/ dir
+    - EnvironmentVariables > HOME -> your home directory
+    - EnvironmentVariables > PATH -> dirs holding claude/codex/gemini/copilot
+                                     (check with: which claude codex gemini copilot)
+  The PATH must contain the CLI engine binaries; under launchd the default
+  PATH is just /usr/bin:/bin, so the node/nvm and ~/.local/bin dirs are
+  listed explicitly or the engines won't be found.
+-->
 <dict>
     <key>Label</key>
     <string>com.ainews.briefing</string>

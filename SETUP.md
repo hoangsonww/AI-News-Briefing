@@ -164,6 +164,15 @@ bash scripts/test-obsidian.sh
 
 ### macOS (launchd)
 
+> **Before copying:** `com.ainews.briefing.plist` is checked in with the author's
+> absolute paths (user `davidnguyen`). launchd does **not** expand `~`, `$HOME`, or
+> env vars, so edit the plist first and replace every path for your machine:
+> `ProgramArguments` (your `briefing.sh`), `StandardOutPath`/`StandardErrorPath`
+> (your `logs/`), `HOME`, and `PATH`. The `PATH` must include the dirs holding the
+> CLI engine binaries — under launchd the default `PATH` is only `/usr/bin:/bin`, so
+> the engines won't be found unless listed explicitly. Find them with:
+> `which claude codex gemini copilot`.
+
 ```bash
 cp com.ainews.briefing.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.ainews.briefing.plist
