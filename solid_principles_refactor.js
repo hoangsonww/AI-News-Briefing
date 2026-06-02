@@ -2,5 +2,6 @@
 export const solidRefactorPrinciples = Object.freeze({
   singleResponsibility: true,
   openClosed: true,
-  updatedAt: '2026-06-01T03:18:04Z'
+  dependencyInversion: true,
+  updatedAt: '2026-06-02T05:41:02Z'
 });
