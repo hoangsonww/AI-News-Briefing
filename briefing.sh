@@ -22,6 +22,7 @@ cd "$SCRIPT_DIR" || { echo "ERROR: cannot cd to $SCRIPT_DIR" >&2; exit 1; }
 # -- Argument parsing ------------------------------------------
 CLI_ARG=""
 DATE_ARG=""
+CATCHUP=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -31,6 +32,11 @@ while [[ $# -gt 0 ]]; do
     --date|-d)
       [[ $# -lt 2 ]] && { echo "ERROR: --date requires a value" >&2; exit 1; }
       DATE_ARG="$2"; shift 2 ;;
+    --catchup)
+      # Scheduled-trigger mode: run today's briefing only if it hasn't run yet
+      # and it's at/after 08:00. Lets launchd fire this on every wake without
+      # double-posting or back-filling days the machine was asleep through.
+      CATCHUP=true; shift ;;
     --help|-h)
       cat <<'USAGE'
 Usage: briefing.sh [OPTIONS] [DATE]
@@ -40,6 +46,9 @@ Run the daily AI news briefing pipeline.
 Options:
   --cli, -c ENGINE   AI engine: claude, codex, gemini, copilot
   --date, -d DATE    Briefing date (YYYY-MM-DD), default: today
+  --catchup          Scheduled mode: run today only if not already done and
+                     it's at/after 08:00 (skips if asleep through 8am until
+                     next wake same day; never back-fills missed days)
   --help, -h         Show this help
 
 Environment:
@@ -68,6 +77,37 @@ mkdir -p "$LOG_DIR"
 write_log() {
   echo "[$DATE $(date +%H:%M:%S)] $1" >> "$LOG_FILE"
 }
+
+# -- Catch-up guard (scheduled --catchup runs only) ------------
+# Goal: 8am run when awake; if asleep at 8am, run on the next wake THAT day;
+# if the machine isn't opened until a later day, treat the missed day as gone
+# (the run always targets the current date, so it never back-fills).
+if [[ "$CATCHUP" == "true" ]]; then
+  if [ -f "$LOG_DIR/$DATE-card.json" ]; then
+    write_log "Catch-up: briefing for $DATE already done; skipping."
+    exit 0
+  fi
+  HHMM=$(date +%H%M)
+  if (( 10#$HHMM < 800 )); then
+    write_log "Catch-up: before 08:00 (now $HHMM); deferring to the scheduled run."
+    exit 0
+  fi
+  write_log "Catch-up: no briefing yet for $DATE and now is $HHMM; running."
+fi
+
+# -- Single-run lock -------------------------------------------
+# Prevent overlap when the 8am calendar fire and a wake-triggered interval
+# fire (or two interval ticks) land close together. mkdir is atomic.
+LOCK_DIR="$LOG_DIR/.briefing.lock"
+if [ -d "$LOCK_DIR" ] && find "$LOCK_DIR" -prune -mmin +180 2>/dev/null | grep -q .; then
+  write_log "Removing stale lock (>3h old) from a crashed run."
+  rmdir "$LOCK_DIR" 2>/dev/null || rm -rf "$LOCK_DIR"
+fi
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  write_log "Another briefing run holds the lock; exiting."
+  exit 0
+fi
+trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT
 
 write_log "Starting AI News Briefing..."
 
