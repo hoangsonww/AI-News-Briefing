@@ -15,6 +15,7 @@ Complete guide to monitoring, searching, and managing logs for both the daily au
 | Dedup tracker | `logs/covered-stories.txt` | (single file, appended daily) |
 | launchd stdout | `logs/launchd-stdout.log` | (macOS only, single file) |
 | launchd stderr | `logs/launchd-stderr.log` | (macOS only, single file) |
+| Run lock | `logs/.briefing.lock/` | (transient dir; held during a run, auto-cleared on exit or if >3h stale) |
 
 ---
 

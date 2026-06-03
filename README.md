@@ -215,12 +215,14 @@ To customize the time:
 
 ### Change the schedule
 
-**macOS:** Edit `com.ainews.briefing.plist` and modify the `StartCalendarInterval` section, then reload:
+**macOS:** Edit `com.ainews.briefing.plist` and modify the `StartCalendarInterval` section (the daily run time), then reload:
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.ainews.briefing.plist
 launchctl load ~/Library/LaunchAgents/com.ainews.briefing.plist
 ```
+
+The plist also carries a `StartInterval` (every 30 min) that drives the sleep/wake **catch-up** -- it runs `briefing.sh --catchup`, which only acts when today's briefing hasn't run yet and it's past 08:00. Leave it in place; it is what recovers a run missed because the Mac was asleep at 8 AM. To change the catch-up cadence, edit the `StartInterval` integer (seconds).
 
 **Windows:** Re-run the installer with new time parameters:
 
@@ -814,8 +816,10 @@ This error occurs when the `CLAUDECODE` environment variable is set, which happe
 
 **macOS (launchd):**
 
-- **Mac was asleep:** launchd will run the job when the Mac wakes up if the scheduled time was missed. If Power Nap is disabled or the lid was closed, the job may not fire until the next login.
-- **Powered off at scheduled time:** The job is skipped entirely for that day.
+- **Mac was asleep at 8 AM:** The job is registered with both `StartCalendarInterval` (8 AM) and `StartInterval` (every 30 min). If the Mac sleeps through 8 AM, launchd fires the missed interval on the next wake, and `briefing.sh --catchup` runs that day's briefing as long as it is at/after 08:00 and the briefing has not already run. So a sleep-through-8 AM is covered automatically on the next wake **the same day**.
+- **Mac stayed asleep until a later day:** The missed day is treated as gone -- `--catchup` always targets the current date and never back-fills. Whenever the Mac next wakes (past 08:00) it runs *that* day's briefing only.
+- **Already ran today:** Catch-up exits immediately if `logs/YYYY-MM-DD-card.json` already exists, so the 30-min interval never double-posts.
+- **Powered off at scheduled time:** Same as above -- the job runs once on next boot/wake for the current day; earlier days are skipped.
 - **Agent not loaded:** Verify with `launchctl list | grep ainews`. If missing, reload the plist.
 - **Path issues:** The plist sets a custom `PATH` and `HOME`. If Claude is installed in a non-standard location, update the `PATH` in the plist.
 

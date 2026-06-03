@@ -120,6 +120,25 @@ export AI_BRIEFING_SLACK_WEBHOOK="https://hooks.slack.com/services/T.../B.../...
 [Environment]::SetEnvironmentVariable("AI_BRIEFING_SLACK_WEBHOOK", "https://hooks.slack.com/services/T.../B.../...", "User")
 ```
 
+> **macOS persistence — two separate places.** A bare `export` only lives in the
+> current shell. For it to survive new shells **and** the scheduled run you must set
+> it in both:
+> - **`~/.zshenv`** — sourced by every zsh (interactive and non-interactive), so
+>   manual runs and `scripts/notify-slack.sh` pick it up:
+>   ```bash
+>   echo 'export AI_BRIEFING_SLACK_WEBHOOK="https://hooks.slack.com/services/T.../B.../..."' >> ~/.zshenv
+>   chmod 600 ~/.zshenv   # it holds a secret
+>   ```
+> - **The launchd plist `EnvironmentVariables` block** — launchd does **not** read
+>   shell profiles, so the 8 AM / catch-up job only sees the webhook if it is listed
+>   there. Add it to your installed `~/Library/LaunchAgents/com.ainews.briefing.plist`
+>   (do **not** commit a real webhook into the checked-in plist):
+>   ```xml
+>   <key>AI_BRIEFING_SLACK_WEBHOOK</key>
+>   <string>https://hooks.slack.com/services/T.../B.../...</string>
+>   ```
+>   Then reload: `launchctl bootout gui/$(id -u)/com.ainews.briefing 2>/dev/null; launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ainews.briefing.plist`
+
 ### Multiple Webhooks
 
 Separate multiple URLs with semicolons:
@@ -178,6 +197,17 @@ cp com.ainews.briefing.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.ainews.briefing.plist
 launchctl list | grep ainews
 ```
+
+**Scheduling model.** The plist runs `briefing.sh --catchup` and registers two triggers:
+- `StartCalendarInterval` (08:00) — the punctual daily run when the Mac is awake.
+- `StartInterval` (1800s) — the **catch-up**. launchd fires a missed interval on the
+  next wake; with `--catchup` the script runs today's briefing only if it hasn't run
+  yet (`logs/YYYY-MM-DD-card.json` is absent) and the clock is at/after 08:00.
+
+Net effect: asleep through 8 AM → the briefing runs on the next wake **the same day**;
+a day the Mac never opens is skipped (no back-fill); already-ran days never double-post.
+A `logs/.briefing.lock` directory guards against overlapping fires and is auto-cleared
+(including a stale lock older than 3h from a crashed run).
 
 ### Windows (Task Scheduler)
 

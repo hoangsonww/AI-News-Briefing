@@ -157,6 +157,7 @@ sequenceDiagram
 | Scheduler | `com.ainews.briefing.plist` | Task `AiNewsBriefing` via `install-task.ps1` |
 | Entry script | `briefing.sh` | `briefing.ps1` |
 | Default schedule | 08:00 daily | 08:00 daily |
+| Sleep/wake catch-up | `StartInterval` (30 min) runs `briefing.sh --catchup` -- covers a run missed by sleeping through 8 AM on the next wake the same day; never back-fills | `StartWhenAvailable` runs the task on next wake/login |
 | Manual trigger | `make run`, `make run-bg`, `make run-scheduled` | same Make targets, or `schtasks /run /tn AiNewsBriefing` |
 
 Entry scripts do the same core setup:

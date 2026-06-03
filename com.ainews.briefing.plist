@@ -23,8 +23,10 @@
     <array>
         <string>/bin/bash</string>
         <string>/Users/davidnguyen/ai-news-briefing/briefing.sh</string>
+        <string>--catchup</string>
     </array>
 
+    <!-- Punctual 8am run when the machine is awake. -->
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
@@ -32,6 +34,13 @@
         <key>Minute</key>
         <integer>0</integer>
     </dict>
+
+    <!-- Catch-up: launchd fires a missed interval on the next wake. With
+         --catchup the script runs today only if not already done and it's
+         past 08:00, so a sleep-through-8am gets covered on wake the same day,
+         while a day the machine never opened is simply skipped. -->
+    <key>StartInterval</key>
+    <integer>1800</integer>
 
     <key>StandardOutPath</key>
     <string>/Users/davidnguyen/ai-news-briefing/logs/launchd-stdout.log</string>
