@@ -93,7 +93,7 @@ If you cannot determine the exact date of a story, note "(date unconfirmed)" and
 **CRITICAL: Never create a duplicate page.** Use the `PAGE_EXISTS` result from Step 0b to decide:
 
 ### If PAGE_EXISTS = true (page for today already exists)
-Use `mcp__notion__notion-update-page` with the page ID from Step 0b to update the existing page. Replace the content with the new briefing. Update the Topics property if it changed.
+Use `mcp__notion__notion-update-page` with the page ID from Step 0b to update the existing page. Replace the content with the new briefing. Update the Topics property if it changed. Also set `icon: "📰"` so the page keeps the newspaper icon used across the database.
 
 ### If PAGE_EXISTS = false (no page for today)
 Use `mcp__notion__notion-create-pages` to create a new page **inside the AI Daily Briefing database**.
@@ -101,12 +101,13 @@ Use `mcp__notion__notion-create-pages` to create a new page **inside the AI Dail
 Use these EXACT parameters:
 - parent: {"type": "data_source_id", "data_source_id": "856794cc-d871-4a95-be2d-2a1600920a19"}
 - properties: {"Date": "[TODAY'S DATE]", "Status": "Complete", "Topics": 9}
+- icon: "📰"  (the newspaper emoji -- set this on the page so it matches every other entry in the database)
 - content: The full briefing formatted in Notion-flavored Markdown
 
 **NON-NEGOTIABLE — the page MUST live in the database, not the workspace:**
 - You MUST pass the `parent` with the `data_source_id` above on the SAME `create-pages` call that writes the content. Never call `create-pages` without `parent` — that creates an orphan workspace page that does NOT appear in the database, which is a failure.
 - The title property is named **`Date`** and its value is the bare date only, e.g. `2026-06-02` (NOT `2026-06-02 - AI Daily Briefing`, NOT empty). Existing pages use the bare date and the database view sorts on it.
-- After creating, the page's parent must be `collection://856794cc-...` (the data source). If you ever find you created a top-level/"New page" with an empty title, immediately use `mcp__notion__notion-move-pages` to move it under `data_source_id` `856794cc-d871-4a95-be2d-2a1600920a19`, then `mcp__notion__notion-update-page` to set `Date`, `Status`, and `Topics`.
+- After creating, the page's parent must be `collection://856794cc-...` (the data source). If you ever find you created a top-level/"New page" with an empty title, immediately use `mcp__notion__notion-move-pages` to move it under `data_source_id` `856794cc-d871-4a95-be2d-2a1600920a19`, then `mcp__notion__notion-update-page` to set `Date`, `Status`, `Topics`, and `icon: "📰"`.
 
 **Do NOT re-query Notion here.** Trust Step 0b's result. Re-querying risks false negatives from title format mismatches or API timing, which causes duplicate pages.
 
