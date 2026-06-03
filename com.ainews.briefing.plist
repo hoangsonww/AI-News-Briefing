@@ -55,7 +55,7 @@
         <key>HOME</key>
         <string>/Users/davidnguyen</string>
         <key>AI_BRIEFING_MODEL</key>
-        <string>claude-haiku-4-5-20251001</string>
+        <string>claude-sonnet-4-6</string>
     </dict>
 </dict>
 </plist>

@@ -209,6 +209,13 @@ a day the Mac never opens is skipped (no back-fill); already-ran days never doub
 A `logs/.briefing.lock` directory guards against overlapping fires and is auto-cleared
 (including a stale lock older than 3h from a crashed run).
 
+> **Model matters for the Notion step.** The plist sets `AI_BRIEFING_MODEL` to a
+> capable model (`claude-sonnet-4-6`). A weaker model (e.g. Haiku) has been observed
+> to ignore the `parent` in `prompt.md` Step 3 and create an **orphan workspace page**
+> that never lands in the database. If you change the model, pick one strong enough to
+> follow the Notion `create-pages` parameters exactly, or briefings won't be tracked
+> in the database. To change it, edit the `AI_BRIEFING_MODEL` string and reload.
+
 ### Windows (Task Scheduler)
 
 ```powershell
