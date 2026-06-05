@@ -1,4 +1,4 @@
-.PHONY: help run run-bg custom-brief custom-brief-bg tail log logs status install uninstall clean-logs check validate prompt eval eval-backfill eval-regression eval-seed-golden eval-drift eval-report eval-show eval-test eval-dashboard eval-summary eval-watch eval-compare plugin-validate scaffold-plugin stats shell-lint mcp-doctor render-card brief-diff prune-artifacts open-brief bench-cli weekly-digest topic-stats git-hooks-install quiet-hours
+.PHONY: help run run-bg custom-brief custom-brief-bg tail log logs status install uninstall clean-logs check validate prompt eval eval-backfill eval-regression eval-seed-golden eval-drift eval-report eval-show eval-test eval-dashboard eval-summary eval-watch eval-compare plugin-validate scaffold-plugin stats shell-lint mcp-doctor render-card validate-card brief-diff prune-artifacts open-brief bench-cli weekly-digest topic-stats git-hooks-install quiet-hours
 
 SHELL := /bin/bash
 DATE  := $(shell date +%Y-%m-%d)
@@ -375,6 +375,10 @@ mcp-doctor: ## Diagnose MCP server configs (Claude/Codex/Gemini/Copilot). SERVER
 render-card: ## Pretty-print a card.json in the terminal. D=YYYY-MM-DD EXAMPLE=1
 	@bash "$(SCRIPT_DIR)/scripts/render-card.sh" \
 		$(if $(EXAMPLE),--example $(or $(D),$(DATE)),$(if $(D),--date $(D)))
+
+validate-card: ## Lint a card.json before delivery (real Notion URL, size, structure). D=YYYY-MM-DD
+	@bash "$(SCRIPT_DIR)/scripts/validate-card.sh" \
+		--card-file "$(SCRIPT_DIR)/logs/$(or $(D),$(DATE))-card.json"
 
 brief-diff: ## Diff two days of briefings. FROM=YYYY-MM-DD TO=YYYY-MM-DD EXAMPLE=1
 	@bash "$(SCRIPT_DIR)/scripts/brief-diff.sh" \
