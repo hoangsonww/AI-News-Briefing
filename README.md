@@ -415,6 +415,7 @@ These scripts target Unix-only concerns (POSIX shells, `launchctl`, `open`/`xdg-
 | `shell-lint` | Run `bash -n` + `shellcheck` (if installed) on every `.sh` in the repo | `bash scripts/shell-lint.sh --strict` or `make shell-lint STRICT=1` |
 | `mcp-doctor` | Diagnose Notion (or any) MCP server config across Claude / Codex / Gemini / Copilot configs | `bash scripts/mcp-doctor.sh` or `make mcp-doctor SERVER=notion` |
 | `render-card` | Pretty-print a daily `*-card.json` in the terminal with ANSI sections, bullets, and source links | `bash scripts/render-card.sh --example 2026-03-18` |
+| `validate-card` | Lint a `*-card.json` before delivery: valid JSON, size budget, real Notion button URL (not a placeholder), Sources section, one-bullet-per-TextBlock. Exits non-zero on failure | `bash scripts/validate-card.sh logs/2026-03-18-card.json` or `make validate-card D=2026-03-18` |
 | `brief-diff` | Show what changed between two days of briefings (uses `delta` if installed) | `bash scripts/brief-diff.sh --from 2026-03-17 --to 2026-03-18` |
 | `prune-artifacts` | Find and (with `--apply`) remove orphaned `*-card.json` / `*-obsidian.md` files | `bash scripts/prune-artifacts.sh --days 30 --apply` |
 | `open-brief` | Open today's log / card / obsidian / Notion URL via `open` (macOS) or `xdg-open` (Linux) | `bash scripts/open-brief.sh --what notion` |
