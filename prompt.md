@@ -67,16 +67,27 @@ In addition to web searches, use `WebFetch` to check the following official chan
 - If a changelog entry duplicates something already found via web search, keep the more detailed version and discard the other.
 - If none of the changelogs have entries for today, that is fine — move on.
 
+### Step 1c: Verify Every Date Before Using It (anti-hallucination — highest priority)
+
+The most common failure of this briefing is presenting an **old** release as if it happened today and inventing a date for it (e.g. calling a model that shipped 3 months ago "released today"). Do not do this. Apply these rules to every single item:
+
+- **The briefing date is NOT a story's date.** The `BRIEFING DATE` given above is only the date of the briefing itself. Never stamp an item with the briefing date by default, and never write "today" as a date.
+- **Use the source's real date.** For each item, open/read the source, find the ACTUAL date the event happened (and the article's publication date), and put that real date in the parenthetical — copied from the source, not inferred.
+- **Recency gate.** Only include an item if the NEW event genuinely occurred within ~the last 24-48 hours of the briefing date. If the underlying thing is older, exclude it — UNLESS there is a genuinely new development now, in which case report only that new development, date IT, and describe the older thing as pre-existing background. Example of the correct framing: "GPT-5.4 (originally released months earlier) became generally available on Amazon Bedrock (Jun 2, 2026)" — the Bedrock GA is the news, the model is not.
+- **An article's date is not the event's date.** A product appearing in a today-dated article does NOT mean the product is new today. When unsure whether something is actually new, run a confirming search like `"[product] release date"` or `"[feature] launched when"` and only call it new if the original release falls in the window.
+- **Banned phrasings** unless the source explicitly dates the event to the briefing date: "today", "released today", "announced today", "just launched", "this morning". Use "on [real date]" instead.
+- **Omit rather than guess.** If you cannot confirm a real, recent date from a source, drop the item. Do NOT include undated or stale items to fill space. A short section or "No major updates today" is correct and expected; fabricated recency is a failure.
+
 ## Step 2: Compile the Briefing
 
 Format the briefing in TWO tiers:
 
 ### Date Attribution Rule
 
-**Every** news item, bullet point, and piece of information MUST include its publication date in parentheses at the end, e.g.:
+**Every** news item, bullet point, and piece of information MUST include the event's REAL date in parentheses at the end (verified per Step 1c — the source's actual date, never the briefing date and never "today"), e.g.:
 - "Anthropic released Claude 4.5 Haiku with improved coding benchmarks (Mar 9, 2026)"
 
-If you cannot determine the exact date of a story, note "(date unconfirmed)" and include it only if it is clearly from the past 24 hours based on other signals.
+The date you write must be the date you actually saw in the source. If you cannot determine a real date for a story from its source, **omit the story** — do not write "(date unconfirmed)" to keep it, and do not guess. Only include items whose verified date falls within the past ~24-48 hours of the briefing date (see Step 1c's recency gate and the rule for reporting new developments on older products).
 
 ### Tier 1: TL;DR (top of page)
 - 10-15 bullet points covering the biggest stories across all topics
@@ -329,7 +340,8 @@ After generating the briefing and card, append today's story headlines to `logs/
 - After appending, remove any lines older than 30 days from the file to prevent unbounded growth.
 
 ## Important Notes
-- Focus on NEWS from the past 24 hours only — not evergreen content, not older stories
+- **Verify every date against its source (Step 1c).** Never assume a story happened on the briefing date, never write "today"/"released today" unless the source explicitly dates it so, and never invent a date. Presenting an old release as new is the worst failure mode — if you can't confirm a real recent date, omit the item.
+- Focus on NEWS from the past 24 hours only — not evergreen content, not older stories. Old products only qualify when there is a genuinely new, dated development (report the development, not the product).
 - Do NOT repeat stories already in `logs/covered-stories.txt` or in the most recent Notion page (from Step 0)
 - If a topic has no significant news today, say "No major updates today" for that section
 - Always attribute sources (publication name) and include the publication date
