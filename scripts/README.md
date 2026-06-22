@@ -1232,6 +1232,7 @@ Scripts read configuration from environment variables. None are required at run-
 |---|---|---|---|
 | `AI_BRIEFING_CLI` | `briefing.sh`, `custom-brief.sh` | auto-detect via fallback chain | Force a specific engine (`claude` / `codex` / `gemini` / `copilot`) |
 | `AI_BRIEFING_MODEL` | `briefing.sh`, `custom-brief.sh` | engine-specific | Override the model passed to the selected engine |
+| `AI_BRIEFING_TZ` | `briefing.sh` / `.ps1` | `America/Los_Angeles` (`Pacific Standard Time` on Windows) | Timezone for the briefing's "today" and the 08:00 schedule. DST handled automatically. *nix uses IANA ids; Windows uses Windows zone ids (PS 7+ also accepts IANA). |
 | `AI_BRIEFING_TEAMS_WEBHOOK` | `notify-teams.sh` / `.ps1` | unset | Teams Incoming Webhook URL (or `;`-separated list) |
 | `AI_BRIEFING_SLACK_WEBHOOK` | `notify-slack.sh` / `.ps1` | unset | Slack Incoming Webhook URL (or `;`-separated list) |
 | `AI_BRIEFING_OBSIDIAN_VAULT` | `briefing.sh`, `publish-obsidian.sh` / `.ps1`, `test-obsidian.sh` / `.ps1`, `topic-stats.sh` | unset | Absolute path to the Obsidian vault root. When unset, Obsidian publishing is skipped. |

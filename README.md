@@ -85,8 +85,8 @@ flowchart TD
         A2[Windows Task Scheduler]
     end
 
-    A1 -->|8:00 AM daily| B1[briefing.sh]
-    A2 -->|8:00 AM daily| B2[briefing.ps1]
+    A1 -->|8 AM Pacific daily| B1[briefing.sh]
+    A2 -->|8 AM Pacific daily| B2[briefing.ps1]
 
     B1 -->|Reads| C[prompt.md]
     B2 -->|Reads| C
@@ -201,7 +201,7 @@ cd $env:USERPROFILE\ai-news-briefing
 .\install-task.ps1
 ```
 
-This registers a Task Scheduler task named `AiNewsBriefing` that runs daily at 8:00 AM under the current user account.
+This registers a Task Scheduler task named `AiNewsBriefing` that runs daily at **8:00 AM Pacific** (PST/PDT) under the current user account. Task Scheduler triggers fire in the host's local time and have no timezone field, so the task repeats every 30 minutes and `briefing.ps1 -Catchup` gates the run to 08:00 in `AI_BRIEFING_TZ` (default Pacific) -- so it lands at 8 AM Pacific no matter what zone the machine is set to. See [Change the timezone](#change-the-timezone).
 
 To customize the time:
 
@@ -215,20 +215,44 @@ To customize the time:
 
 ### Change the schedule
 
-**macOS:** Edit `com.ainews.briefing.plist` and modify the `StartCalendarInterval` section (the daily run time), then reload:
+The briefing fires at **8:00 AM Pacific (PST/PDT)** by default, regardless of the host machine's clock or timezone. Neither launchd nor Task Scheduler has a timezone field, so the time is pinned inside the entry script: it polls frequently and `--catchup` / `-Catchup` only runs once the clock passes 08:00 in `AI_BRIEFING_TZ`. To run in a different zone, see [Change the timezone](#change-the-timezone); to change the *hour*, adjust the trigger and the `08:00` gate as below.
+
+**macOS:** Edit `com.ainews.briefing.plist` and modify the `StartCalendarInterval` entries, then reload:
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.ainews.briefing.plist
 launchctl load ~/Library/LaunchAgents/com.ainews.briefing.plist
 ```
 
-The plist also carries a `StartInterval` (every 30 min) that drives the sleep/wake **catch-up** -- it runs `briefing.sh --catchup`, which only acts when today's briefing hasn't run yet and it's past 08:00. Leave it in place; it is what recovers a run missed because the Mac was asleep at 8 AM. To change the catch-up cadence, edit the `StartInterval` integer (seconds).
+> The `StartCalendarInterval` is an array of host-local times that map to 08:00 Pacific (e.g. on a UTC+7 host, `22:00` = 8 AM PDT and `23:00` = 8 AM PST). Both fire; the Pacific guard runs only the one at/after 08:00 Pacific. The `StartInterval` (every 30 min) is the sleep/wake **catch-up** -- it runs `briefing.sh --catchup`, which only acts when today's briefing hasn't run yet and it's past 08:00 Pacific. Leave it in place; it recovers a run missed because the Mac was asleep at 8 AM.
 
-**Windows:** Re-run the installer with new time parameters:
+**Windows:** Re-run the installer with a new host-local anchor time (the 30-min poll + Pacific guard still apply):
 
 ```powershell
 .\install-task.ps1 -Hour 9 -Minute 0
 ```
+
+### Change the timezone
+
+The briefing's notion of "today" and its 08:00 schedule both follow `AI_BRIEFING_TZ`. The default is Pacific. Set it to any zone -- DST is handled automatically.
+
+```bash
+# macOS / Linux -- use an IANA zone id
+export AI_BRIEFING_TZ=America/New_York
+```
+
+```powershell
+# Windows -- use a Windows zone id ("Eastern Standard Time" covers EST/EDT)
+setx AI_BRIEFING_TZ "Eastern Standard Time"
+```
+
+On macOS the scheduled job reads it from the plist's `EnvironmentVariables`. Set it in one step (edits the installed plist in place and reloads):
+
+```bash
+./scripts/update-schedule.sh --tz America/New_York
+```
+
+Or add/edit the `AI_BRIEFING_TZ` key in `com.ainews.briefing.plist` by hand and reload. On Windows, `setx` persists it to your user environment and `briefing.ps1` picks it up on the next run. (PowerShell 7+ also accepts IANA ids like `America/New_York`; Windows PowerShell 5.1 requires the Windows id.)
 
 ### Change the AI engine
 
@@ -279,7 +303,7 @@ Edit `prompt.md` and modify the "Topics to Search" list. You can add, remove, or
 
 ### Automatic (scheduled)
 
-Once installed, the briefing runs automatically every day at the scheduled time (default: 8:00 AM). No action needed.
+Once installed, the briefing runs automatically every day at the scheduled time (default: 8:00 AM Pacific, PST/PDT). No action needed.
 
 ### Manual trigger
 

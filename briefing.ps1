@@ -11,6 +11,13 @@
 .PARAMETER Cli
     AI engine to use: claude, codex, gemini, copilot.
     If omitted, reads AI_BRIEFING_CLI env var; if unset, tries each in order.
+.PARAMETER Catchup
+    Scheduled mode: run today only if not already done and it is at/after 08:00
+    in AI_BRIEFING_TZ (default Pacific). Lets a frequently-repeating task post
+    exactly once per Pacific day. Never back-fills missed days.
+.NOTES
+    AI_BRIEFING_TZ controls the briefing's "today" and the 08:00 schedule
+    (default "Pacific Standard Time"; PST/PDT handled automatically).
 .EXAMPLE
     .\briefing.ps1
 .EXAMPLE
@@ -22,7 +29,8 @@
 param(
     [string]$BriefingDate = "",
     [ValidateSet("claude", "codex", "gemini", "copilot", "")]
-    [string]$Cli = ""
+    [string]$Cli = "",
+    [switch]$Catchup
 )
 
 Set-StrictMode -Version Latest
@@ -30,17 +38,34 @@ $ErrorActionPreference = "Continue"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $LogDir = Join-Path $ScriptDir "logs"
-$Date = if ($BriefingDate) { $BriefingDate } else { Get-Date -Format "yyyy-MM-dd" }
-$LogFile = Join-Path $LogDir "$Date.log"
 
 # Prevent nested Claude Code sessions
 $env:CLAUDECODE = $null
 
-# Refresh persistent env vars from registry
-foreach ($name in @("AI_BRIEFING_TEAMS_WEBHOOK", "AI_BRIEFING_SLACK_WEBHOOK", "AI_BRIEFING_CLI", "AI_BRIEFING_MODEL")) {
+# Refresh persistent env vars from registry (User scope -> Process scope)
+foreach ($name in @("AI_BRIEFING_TEAMS_WEBHOOK", "AI_BRIEFING_SLACK_WEBHOOK", "AI_BRIEFING_CLI", "AI_BRIEFING_MODEL", "AI_BRIEFING_TZ")) {
     $val = [Environment]::GetEnvironmentVariable($name, "User")
     if ($val) { [Environment]::SetEnvironmentVariable($name, $val, "Process") }
 }
+
+# -- Briefing timezone -----------------------------------------
+# The notion of "today" and the 08:00 schedule follow this timezone (default
+# Pacific) regardless of the host machine's clock. Use a Windows zone id --
+# "Pacific Standard Time" already covers PST/PDT (DST handled automatically).
+# On PowerShell 7+ an IANA id such as "America/Los_Angeles" also resolves.
+# Override with AI_BRIEFING_TZ.
+$BriefTz = if ($env:AI_BRIEFING_TZ) { $env:AI_BRIEFING_TZ } else { "Pacific Standard Time" }
+function Get-BriefNow {
+    try {
+        $tz = [System.TimeZoneInfo]::FindSystemTimeZoneById($BriefTz)
+        return [System.TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::UtcNow, $tz)
+    } catch {
+        return (Get-Date)  # unknown id (e.g. an IANA name on PS 5.1) -> host local
+    }
+}
+$BriefNow = Get-BriefNow
+$Date = if ($BriefingDate) { $BriefingDate } else { $BriefNow.ToString("yyyy-MM-dd") }
+$LogFile = Join-Path $LogDir "$Date.log"
 
 if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
@@ -49,8 +74,27 @@ if (-not (Test-Path $LogDir)) {
 # -- Logging ---------------------------------------------------
 function Write-Log {
     param([string]$Message)
-    $ts = Get-Date -Format "HH:mm:ss"
+    $ts = (Get-BriefNow).ToString("HH:mm:ss")
     "$Date $ts $Message" | Out-File -FilePath $LogFile -Append -Encoding utf8
+}
+
+# -- Catch-up guard (scheduled -Catchup runs only) -------------
+# All times are in BriefTz (Pacific by default), not the host clock. Run today
+# only if not already done and it is at/after 08:00; before then, defer to a
+# later repetition. Mirrors the macOS/launchd catch-up behavior so the task can
+# poll often and still post exactly once per Pacific day.
+if ($Catchup) {
+    $cardPath = Join-Path $LogDir "$Date-card.json"
+    if (Test-Path $cardPath) {
+        Write-Log "Catch-up: briefing for $Date already done; skipping."
+        exit 0
+    }
+    $hhmm = [int]((Get-BriefNow).ToString("HHmm"))
+    if ($hhmm -lt 800) {
+        Write-Log "Catch-up: before 08:00 $BriefTz (now $hhmm); deferring to a later run."
+        exit 0
+    }
+    Write-Log "Catch-up: no briefing yet for $Date and now is $hhmm $BriefTz; running."
 }
 
 Write-Log "Starting AI News Briefing..."
@@ -126,7 +170,7 @@ if (-not (Test-Path $PromptFile)) {
 
 $Prompt = Get-Content -Path $PromptFile -Raw
 
-$today = Get-Date -Format "yyyy-MM-dd"
+$today = $BriefNow.ToString("yyyy-MM-dd")
 if ($Date -ne $today) {
     $datePrefix = @"
 BRIEFING DATE OVERRIDE: $Date
