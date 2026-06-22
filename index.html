@@ -268,8 +268,8 @@ flowchart LR
         A2["Windows Task Scheduler"]
         A3["Manual / make run"]
     end
-    A1 --> B["briefing.sh / .ps1"]
-    A2 --> B
+    A1 -->|8 AM Pacific| B["briefing.sh / .ps1"]
+    A2 -->|8 AM Pacific| B
     A3 --> B
     B --> C["prompt.md"]
     C --> D["AI Engine (Claude/Codex/Gemini/Copilot)"]
@@ -301,8 +301,8 @@ flowchart TD
         A3["Manual make run"]
     end
 
-    A1 --> B1["briefing.sh"]
-    A2 --> B2["briefing.ps1"]
+    A1 -->|8 AM Pacific| B1["briefing.sh"]
+    A2 -->|8 AM Pacific| B2["briefing.ps1"]
     A3 --> B1
     A3 --> B2
 
@@ -429,7 +429,7 @@ sequenceDiagram
         </tr>
       </thead>
       <tbody>
-        <tr><td>Trigger</td><td>08:00 schedule or manual command</td><td>Script execution starts</td><td><code>com.ainews.briefing.plist</code>, <code>install-task.ps1</code>, <code>Makefile</code></td></tr>
+        <tr><td>Trigger</td><td>08:00 Pacific (PST/PDT) schedule or manual command</td><td>Script execution starts</td><td><code>com.ainews.briefing.plist</code>, <code>install-task.ps1</code>, <code>Makefile</code></td></tr>
         <tr><td>Bootstrap</td><td>Date + environment</td><td>Prompt text + runtime context</td><td><code>briefing.sh</code>, <code>briefing.ps1</code></td></tr>
         <tr><td>Dedup</td><td><code>logs/covered-stories.txt</code> + latest Notion page</td><td>Exclusion list for this run</td><td>Step 0a (file) + Step 0b (Notion MCP)</td></tr>
         <tr><td>AI Run</td><td><code>prompt.md</code></td><td>Notion briefing + card.json + obsidian.md + covered-stories update</td><td>AI engine (Claude/Codex/Gemini/Copilot), WebSearch, Notion MCP</td></tr>
@@ -664,7 +664,7 @@ flowchart TD
       </tr>
       </thead>
       <tbody>
-      <tr><td>Trigger</td><td>Scheduled (8:00 AM daily)</td><td>On-demand</td></tr>
+      <tr><td>Trigger</td><td>Scheduled (8:00 AM Pacific / PST/PDT, daily)</td><td>On-demand</td></tr>
       <tr><td>Scope</td><td>9 fixed AI topics</td><td>Any user-defined topic</td></tr>
       <tr><td>Depth</td><td>Broad scan (search per topic)</td><td>Deep (5 parallel agents + follow-ups)</td></tr>
       <tr><td>Deduplication</td><td>Yes (covered-stories.txt)</td><td>No (standalone)</td></tr>
@@ -898,7 +898,7 @@ graph TD
       <tr><td><code>export-logs</code></td><td>Archive logs to tar.gz/zip</td><td><code>bash scripts/export-logs.sh --from 2026-03-01 --to 2026-03-09</code></td></tr>
       <tr><td><code>backup-prompt</code></td><td>Version and restore prompt.md</td><td><code>bash scripts/backup-prompt.sh --list</code></td></tr>
       <tr><td><code>topic-edit</code></td><td>Add/remove/list topics in prompt.md</td><td><code>bash scripts/topic-edit.sh --list</code></td></tr>
-      <tr><td><code>update-schedule</code></td><td>Adjust scheduler time</td><td><code>bash scripts/update-schedule.sh --hour 7 --minute 30</code></td></tr>
+      <tr><td><code>update-schedule</code></td><td>Adjust scheduler anchor time or timezone</td><td><code>bash scripts/update-schedule.sh 7 30</code> · <code>--tz America/New_York</code></td></tr>
       <tr><td><code>notify</code></td><td>Native OS status notification</td><td><code>bash scripts/notify.sh</code></td></tr>
       <tr><td><code>notify-teams</code></td><td>Validate and POST Adaptive Card JSON to Teams webhook(s)</td><td><code>bash scripts/notify-teams.sh --all --card-file logs/2026-03-24-card.json</code></td></tr>
       <tr><td><code>notify-slack</code></td><td>Convert Teams card JSON to Block Kit and POST to Slack webhook(s)</td><td><code>bash scripts/notify-slack.sh --all --card-file logs/2026-03-24-card.json</code></td></tr>
@@ -976,6 +976,36 @@ flowchart LR
 <span class="comment"># Explicit card file for replay/testing</span>
 <span class="cmd">.\scripts\notify-teams.ps1</span> <span class="flag">-All -CardFile</span> <span class="string">".\logs\2026-03-24-card.json"</span>
 <span class="cmd">.\scripts\notify-slack.ps1</span> <span class="flag">-All -CardFile</span> <span class="string">".\logs\2026-03-24-card.json"</span></pre>
+    </div>
+  </div>
+  <div class="code-section" style="max-width: 780px; margin: 0 auto 1.25rem;">
+    <div class="code-header">
+      <div class="code-dots"><span class="red"></span><span class="yellow"></span><span class="green"></span></div>
+      <span class="code-title">configure timezone (macOS/Linux)</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <div class="code-body">
+<pre><span class="comment"># Briefing fires at 08:00 in AI_BRIEFING_TZ (default America/Los_Angeles),</span>
+<span class="comment"># regardless of the host clock. DST (PST/PDT) is handled automatically.</span>
+<span class="comment"># Set the zone for the installed launchd agent in one step (edits plist + reloads):</span>
+<span class="cmd">bash</span> scripts/update-schedule.sh <span class="flag">--tz</span> America/New_York
+<span class="comment"># Move only the host-local punctual anchor (30-min poll + guard still apply):</span>
+<span class="cmd">bash</span> scripts/update-schedule.sh 7 30
+<span class="comment"># For manual/foreground runs, export it for the process:</span>
+<span class="cmd">export</span> AI_BRIEFING_TZ=<span class="string">"America/Los_Angeles"</span></pre>
+    </div>
+  </div>
+  <div class="code-section" style="max-width: 780px; margin: 0 auto 1.25rem;">
+    <div class="code-header">
+      <div class="code-dots"><span class="red"></span><span class="yellow"></span><span class="green"></span></div>
+      <span class="code-title">configure timezone (Windows PowerShell)</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <div class="code-body">
+<pre><span class="comment"># Use a Windows zone id ("Pacific Standard Time" covers PST/PDT;</span>
+<span class="comment"># PowerShell 7+ also accepts IANA ids like "America/New_York").</span>
+[Environment]::SetEnvironmentVariable(<span class="string">"AI_BRIEFING_TZ"</span>, <span class="string">"Eastern Standard Time"</span>, <span class="string">"User"</span>)
+<span class="comment"># briefing.ps1 refreshes it from the registry on the next scheduled run.</span></pre>
     </div>
   </div>
   <div class="code-section" style="max-width: 780px; margin: 0 auto 1.25rem;">
