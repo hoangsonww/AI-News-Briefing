@@ -26,14 +26,35 @@
         <string>--catchup</string>
     </array>
 
-    <!-- Punctual 8am run when the machine is awake. -->
+    <!-- Punctual 08:00 PACIFIC run when the machine is awake.
+         launchd's StartCalendarInterval has no timezone field; it fires in the
+         HOST's local zone. briefing.sh pins the briefing's notion of "today"
+         and its 08:00 gate to AI_BRIEFING_TZ (default America/Los_Angeles), so
+         set the host times below to whatever maps to 08:00 in that zone on THIS
+         machine. The author's host is Asia/Ho_Chi_Minh (+07, no DST), where
+         08:00 Pacific is two host times across the year:
+           - 22:00 +07  == 08:00 PDT (summer, UTC-7)
+           - 23:00 +07  == 08:00 PST (winter, UTC-8)
+         Both fire daily; the Pacific guard runs only the one at/after 08:00
+         Pacific and skips the other (it lands at 07:00 Pacific, before the
+         gate). If your host clock IS the target zone, a single 08:00 entry is
+         fine. The 1800s StartInterval below is the wake / catch-up safety net so
+         a missed fire still runs within ~30 min. -->
     <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>8</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
+    <array>
+        <dict>
+            <key>Hour</key>
+            <integer>22</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>23</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
 
     <!-- Catch-up: launchd fires a missed interval on the next wake. With
          --catchup the script runs today only if not already done and it's
@@ -56,6 +77,8 @@
         <string>/Users/davidnguyen</string>
         <key>AI_BRIEFING_MODEL</key>
         <string>claude-sonnet-4-6</string>
+        <key>AI_BRIEFING_TZ</key>
+        <string>America/Los_Angeles</string>
     </dict>
 </dict>
 </plist>
