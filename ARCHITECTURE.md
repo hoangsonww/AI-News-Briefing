@@ -82,8 +82,8 @@ The system is composed of five primary layers: a platform-native scheduler, a sc
 ```mermaid
 graph TD
     subgraph "Platform Schedulers"
-        A1[macOS launchd] -->|8:00 AM daily| B1[briefing.sh]
-        A2[Windows Task Scheduler] -->|8:00 AM daily| B2[briefing.ps1]
+        A1[macOS launchd] -->|8 AM Pacific daily| B1[briefing.sh]
+        A2[Windows Task Scheduler] -->|8 AM Pacific daily| B2[briefing.ps1]
     end
 
     subgraph "Engine Selection"
@@ -1743,6 +1743,10 @@ Edit `prompt.md`, Section "Topics to Search". Update the `Topics` property value
 ### Changing the AI Model
 
 Set the `AI_BRIEFING_MODEL` environment variable, or change the `--model` argument in the Claude entry script for your platform (current default: `opus`).
+
+### Changing the Timezone
+
+The briefing's "today" and its 08:00 schedule follow `AI_BRIEFING_TZ`. The scheduler (launchd / Task Scheduler) fires in the host's local time and has no timezone field, so the entry scripts poll frequently and gate the run to 08:00 in `AI_BRIEFING_TZ`. Default is Pacific (`America/Los_Angeles` on *nix, `Pacific Standard Time` on Windows); DST is applied automatically. Override with any IANA zone (`*nix`, or PowerShell 7+) or Windows zone id (Windows PowerShell 5.1).
 
 ### Multi-Engine Support
 

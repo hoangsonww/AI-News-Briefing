@@ -198,13 +198,22 @@ launchctl load ~/Library/LaunchAgents/com.ainews.briefing.plist
 launchctl list | grep ainews
 ```
 
-**Scheduling model.** The plist runs `briefing.sh --catchup` and registers two triggers:
-- `StartCalendarInterval` (08:00) — the punctual daily run when the Mac is awake.
+**Scheduling model.** The briefing fires at **08:00 Pacific (PST/PDT)** regardless of the
+host's timezone. launchd's `StartCalendarInterval` has no timezone field (it uses the host
+clock), so the time is pinned inside `briefing.sh` via `AI_BRIEFING_TZ` (default
+`America/Los_Angeles`) and the plist just polls. The plist runs `briefing.sh --catchup`
+and registers two triggers:
+- `StartCalendarInterval` — an array of host-local times that map to 08:00 Pacific. On a
+  UTC+7 host that is `22:00` (= 8 AM PDT) and `23:00` (= 8 AM PST); both fire daily and the
+  Pacific guard runs only the one at/after 08:00 Pacific. Adjust these for your host's zone.
 - `StartInterval` (1800s) — the **catch-up**. launchd fires a missed interval on the
   next wake; with `--catchup` the script runs today's briefing only if it hasn't run
-  yet (`logs/YYYY-MM-DD-card.json` is absent) and the clock is at/after 08:00.
+  yet (`logs/YYYY-MM-DD-card.json` is absent) and the clock is at/after 08:00 Pacific.
 
-Net effect: asleep through 8 AM → the briefing runs on the next wake **the same day**;
+To run in a zone other than Pacific, edit the `AI_BRIEFING_TZ` key in the plist's
+`EnvironmentVariables` (any IANA zone id) and reload.
+
+Net effect: asleep through 8 AM Pacific → the briefing runs on the next wake **the same day**;
 a day the Mac never opens is skipped (no back-fill); already-ran days never double-post.
 A `logs/.briefing.lock` directory guards against overlapping fires and is auto-cleared
 (including a stale lock older than 3h from a crashed run).
@@ -219,9 +228,14 @@ A `logs/.briefing.lock` directory guards against overlapping fires and is auto-c
 ### Windows (Task Scheduler)
 
 ```powershell
-.\install-task.ps1              # Default: 8:00 AM
-.\install-task.ps1 -Hour 7 -Minute 30  # Custom time
+.\install-task.ps1              # Default: 8:00 AM Pacific (PST/PDT)
+.\install-task.ps1 -Hour 7 -Minute 30  # Custom host-local anchor time
 ```
+
+Like macOS, the Windows task polls every 30 minutes and `briefing.ps1 -Catchup` gates the
+run to 08:00 in `AI_BRIEFING_TZ` (default `Pacific Standard Time`), so it lands at 8 AM
+Pacific on any host zone. Change the zone with `setx AI_BRIEFING_TZ "Eastern Standard Time"`
+(Windows zone id; PowerShell 7+ also accepts IANA ids like `America/New_York`).
 
 ### Change schedule
 
