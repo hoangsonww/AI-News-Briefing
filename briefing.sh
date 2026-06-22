@@ -47,13 +47,15 @@ Options:
   --cli, -c ENGINE   AI engine: claude, codex, gemini, copilot
   --date, -d DATE    Briefing date (YYYY-MM-DD), default: today
   --catchup          Scheduled mode: run today only if not already done and
-                     it's at/after 08:00 (skips if asleep through 8am until
-                     next wake same day; never back-fills missed days)
+                     it's at/after 08:00 Pacific (skips if asleep through 8am
+                     until next wake same Pacific day; never back-fills)
   --help, -h         Show this help
 
 Environment:
   AI_BRIEFING_CLI    Default engine (overridden by --cli)
   AI_BRIEFING_MODEL  Model name (default: opus for claude)
+  AI_BRIEFING_TZ     Timezone for "today" and the 08:00 schedule
+                     (default: America/Los_Angeles)
 USAGE
       exit 0 ;;
     -*)
@@ -63,9 +65,17 @@ USAGE
   esac
 done
 
-DATE="${DATE_ARG:-$(date +%Y-%m-%d)}"
-TODAY=$(date +%Y-%m-%d)
-TIME=$(date +%H:%M:%S)
+# Briefing timezone -----------------------------------------------------------
+# The notion of "today" and the 08:00 schedule follow Pacific time (PST/PDT) no
+# matter what the host machine's clock or timezone is set to. launchd has no
+# timezone field for StartCalendarInterval (it uses the host's local TZ), so the
+# real time pinning lives here in the script and the plist just polls often.
+# Override with AI_BRIEFING_TZ (e.g. America/New_York) for a different zone.
+BRIEF_TZ="${AI_BRIEFING_TZ:-America/Los_Angeles}"
+
+DATE="${DATE_ARG:-$(TZ="$BRIEF_TZ" date +%Y-%m-%d)}"
+TODAY=$(TZ="$BRIEF_TZ" date +%Y-%m-%d)
+TIME=$(TZ="$BRIEF_TZ" date +%H:%M:%S)
 LOG_FILE="$LOG_DIR/$DATE.log"
 
 # Prevent nested Claude Code sessions
@@ -75,24 +85,25 @@ mkdir -p "$LOG_DIR"
 
 # -- Logging ---------------------------------------------------
 write_log() {
-  echo "[$DATE $(date +%H:%M:%S)] $1" >> "$LOG_FILE"
+  echo "[$DATE $(TZ="$BRIEF_TZ" date +%H:%M:%S)] $1" >> "$LOG_FILE"
 }
 
 # -- Catch-up guard (scheduled --catchup runs only) ------------
-# Goal: 8am run when awake; if asleep at 8am, run on the next wake THAT day;
-# if the machine isn't opened until a later day, treat the missed day as gone
-# (the run always targets the current date, so it never back-fills).
+# All times below are Pacific (BRIEF_TZ), not the host clock.
+# Goal: 08:00 Pacific run when awake; if asleep at 08:00, run on the next wake
+# THAT Pacific day; if the machine isn't opened until a later day, treat the
+# missed day as gone (the run targets the current Pacific date, never back-fills).
 if [[ "$CATCHUP" == "true" ]]; then
   if [ -f "$LOG_DIR/$DATE-card.json" ]; then
     write_log "Catch-up: briefing for $DATE already done; skipping."
     exit 0
   fi
-  HHMM=$(date +%H%M)
+  HHMM=$(TZ="$BRIEF_TZ" date +%H%M)
   if (( 10#$HHMM < 800 )); then
-    write_log "Catch-up: before 08:00 (now $HHMM); deferring to the scheduled run."
+    write_log "Catch-up: before 08:00 $BRIEF_TZ (now $HHMM); deferring to the scheduled run."
     exit 0
   fi
-  write_log "Catch-up: no briefing yet for $DATE and now is $HHMM; running."
+  write_log "Catch-up: no briefing yet for $DATE and now is $HHMM $BRIEF_TZ; running."
 fi
 
 # -- Single-run lock -------------------------------------------
