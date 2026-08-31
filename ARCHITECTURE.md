@@ -18,6 +18,7 @@
 ![Windows](https://img.shields.io/badge/Windows-Task_Scheduler-0078D4?logo=windsurf&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-Compatible-FCC624?logo=linux&logoColor=white)
 ![Teams](https://img.shields.io/badge/Microsoft_Teams-Webhook-6264A7?logo=microsoftteams&logoColor=white)
+![Power Automate](https://img.shields.io/badge/Power_Automate-Webhook-0066FF?logo=powerautomate&logoColor=white)
 ![Slack](https://img.shields.io/badge/Slack-Webhook-4A154B?logo=slack&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
 ![Make](https://img.shields.io/badge/Make-Cross_Platform-000000?logo=gnu&logoColor=white)
