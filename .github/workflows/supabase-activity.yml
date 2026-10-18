@@ -1,0 +1,52 @@
+name: Supabase Database Activity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/supabase-activity.yml
+      - .github/scripts/supabase_keepalive.py
+  schedule:
+    # Twice daily, 12 hours apart. GitHub Actions cron uses UTC.
+    - cron: "17 8,20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-database-activity
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    name: Write and verify all Supabase projects
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Update and verify Supabase databases
+        env:
+          SUPABASE_BOXED_INVENTORY_TRACKER_URL: ${{ secrets.SUPABASE_BOXED_INVENTORY_TRACKER_URL }}
+          SUPABASE_BOXED_INVENTORY_TRACKER_SECRET_KEY: ${{ secrets.SUPABASE_BOXED_INVENTORY_TRACKER_SECRET_KEY }}
+          SUPABASE_MPMAGIC_APP_URL: ${{ secrets.SUPABASE_MPMAGIC_APP_URL }}
+          SUPABASE_MPMAGIC_APP_SECRET_KEY: ${{ secrets.SUPABASE_MPMAGIC_APP_SECRET_KEY }}
+          SUPABASE_SYMPTOMSYNC_URL: ${{ secrets.SUPABASE_SYMPTOMSYNC_URL }}
+          SUPABASE_SYMPTOMSYNC_SECRET_KEY: ${{ secrets.SUPABASE_SYMPTOMSYNC_SECRET_KEY }}
+          SUPABASE_DEVVERSE_URL: ${{ secrets.SUPABASE_DEVVERSE_URL }}
+          SUPABASE_DEVVERSE_SECRET_KEY: ${{ secrets.SUPABASE_DEVVERSE_SECRET_KEY }}
+          SUPABASE_PETSWIPE_APPIT_URL: ${{ secrets.SUPABASE_PETSWIPE_APPIT_URL }}
+          SUPABASE_PETSWIPE_APPIT_SECRET_KEY: ${{ secrets.SUPABASE_PETSWIPE_APPIT_SECRET_KEY }}
+          SUPABASE_TASK_MANAGER_REACT_NATIVE_URL: ${{ secrets.SUPABASE_TASK_MANAGER_REACT_NATIVE_URL }}
+          SUPABASE_TASK_MANAGER_REACT_NATIVE_SECRET_KEY: ${{ secrets.SUPABASE_TASK_MANAGER_REACT_NATIVE_SECRET_KEY }}
+          SUPABASE_COLLABNOTE_APP_URL: ${{ secrets.SUPABASE_COLLABNOTE_APP_URL }}
+          SUPABASE_COLLABNOTE_APP_SECRET_KEY: ${{ secrets.SUPABASE_COLLABNOTE_APP_SECRET_KEY }}
+          SUPABASE_ORIOLE_SOCIAL_APP_URL: ${{ secrets.SUPABASE_ORIOLE_SOCIAL_APP_URL }}
+          SUPABASE_ORIOLE_SOCIAL_APP_SECRET_KEY: ${{ secrets.SUPABASE_ORIOLE_SOCIAL_APP_SECRET_KEY }}
+        run: python .github/scripts/supabase_keepalive.py
